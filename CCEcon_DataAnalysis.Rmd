@@ -65,4 +65,10 @@ load(here(dir$prep.data,"Wos_Short.Rdata"))
 head(Wos.Econ.Short$CR)
 ```
 
+Test
+
+```{r}
+table(is.na(Wos.Econ.Short$CR))
+```
+
 
