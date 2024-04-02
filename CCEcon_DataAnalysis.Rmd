@@ -71,4 +71,8 @@ Test
 table(is.na(Wos.Econ.Short$CR))
 ```
 
+Test 2
 
+```{r}
+table(is.na(Wos.Econ.Short$CR), Wos.Econ.Short$PY)
+```
