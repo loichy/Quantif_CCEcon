@@ -1,0 +1,68 @@
+---
+title: "Quantifying interactions between economics of climate change, the rest of economics and other disciplines"
+author: ""
+date: "`r format(Sys.time(), '%d/%m/%y')`"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup, include=FALSE}
+# Clean memory 
+rm(list=ls())
+gc()
+
+# Load package
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere)
+
+# List directories 
+dir <- list()
+dir$root <- here()
+dir$figures <- here(dir$root, "Figures")
+dir$tables <- here(dir$root, "Tables")
+dir$raw.data <- here(dir$root, "Raw_data")
+dir$prep.data <- here(dir$root, "Prepared_data")
+# Create non existing directories
+lapply(dir, function(i) dir.create(i, recursive = T, showWarnings = F))
+
+
+```
+
+# Preliminary data analysis
+
+## Authorship data: gender and affiliation
+Affiliation data `C1`and `RP` variables. We'd like to identify each countries in which authors of the articles are affiliated. Thus, we'd like to create a variable "country" which list each country referenced in the `C1`and `RP`variables. 
+
+You can focus on climate related articles
+
+```{r}
+### First load data:
+load(here(dir$prep.data,"Corpus_Short.Rdata"))
+
+```
+
+
+```{r}
+# table(Corpus$CC)
+table(Corpus.Short$CC)
+```
+
+
+## Citation data
+
+### Clean citation data
+Prepare citation data. We want to create a database, where for each article (one raw in `Corpus`), we have a data frame with its cited articles. (one raw by references). We want to separate information on the authors of the cited articles, the title of the article, the year of publication, and the journal. 
+
+First work with one of the datasource: let's say Wos.
+
+```{r}
+gc()
+load(here(dir$prep.data,"Wos_Short.Rdata"))
+head(Wos.Econ.Short$CR)
+```
+
+
