@@ -28,8 +28,6 @@ dir$raw.data <- here(dir$root, "Raw_data")
 dir$prep.data <- here(dir$root, "Prepared_data")
 # Create non existing directories
 lapply(dir, function(i) dir.create(i, recursive = T, showWarnings = F))
-
-
 ```
 
 # Preliminary data analysis
@@ -42,7 +40,6 @@ You can focus on climate related articles
 ```{r}
 ### First load data:
 load(here(dir$prep.data,"Corpus_Short.Rdata"))
-
 ```
 
 
