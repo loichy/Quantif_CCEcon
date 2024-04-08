@@ -17,7 +17,7 @@ gc()
 
 # Load package
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere)
+pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere, stringr, gender, genderdata)
 
 # List directories 
 dir <- list()
@@ -40,6 +40,72 @@ You can focus on climate related articles
 ```{r}
 ### First load data:
 load(here(dir$prep.data,"Corpus_Short.Rdata"))
+```
+
+## Gender 
+
+Creation of new columns for each author and for each article : separation of the column "AF" into several columns. New columns are entitled "auteur_" and goes from 1 to 10 (1 if there is only 1 author and 10 if there are 10 authors)
+
+```{r}
+Corpus.Short <- Corpus.Short %>%
+  separate(col = AF, into = paste0("author_", 1:10), sep = ";", remove = FALSE, extra = "drop")
+```
+
+Check to see if there are only missing values in one of the new column created
+
+```{r}
+results<- vector("logical", length = 10)
+
+for (i in 1:10) {
+  results[i] <- all(is.na(Corpus.Short[[paste0("author_", i)]]))
+}
+
+print(results)
+```
+
+Delete white spaces in the new columns created
+
+```{r}
+for (i in 1:10) {
+  Corpus.Short[[paste0("author_", i)]] <- str_trim(Corpus.Short[[paste0("author_", i)]])
+}
+```
+
+Delete parenthesis and figures in each columns created 
+
+```{r}
+for (i in 1:10) {
+  Corpus.Short[[paste0("author_", i)]] <- gsub("\\s*\\([^\\)]+\\)", "", Corpus.Short[[paste0("author_", i)]])
+}
+```
+
+Create a column for each last name and first name 
+
+```{r}
+for (i in 1:10) {
+  Corpus.Short <- Corpus.Short %>%
+    separate(col = paste0("author_", i), into = c(paste0("l_name_", i), paste0("f_name_", i)), sep = ",", remove = FALSE, extra = "drop")
+}
+```
+
+Delete white spaces in columns f_name 
+
+```{r}
+for (i in 1:10) {
+  Corpus.Short[[paste0("f_name_", i)]] <- str_trim(Corpus.Short[[paste0("f_name_", i)]])
+}
+```
+
+Dataframe for probabilities for gender 
+
+```{r}
+get_gender_prob <- function(first_name) {
+  gender(first_name)
+}
+
+gender_proba <- lapply(Corpus.Short[, grepl("^f_name_", colnames(Corpus.Short))], get_gender_prob)
+
+gender_proba_df <- do.call(rbind, gender_proba)
 ```
 
 
