@@ -2,7 +2,9 @@
 title: "Quantifying interactions between economics of climate change, the rest of economics and other disciplines"
 author: ""
 date: "`r format(Sys.time(), '%d/%m/%y')`"
-output: html_document
+output: 
+  html_document:
+    css: styles.css
 ---
 
 ```{r, include=FALSE}
@@ -51,6 +53,8 @@ Corpus.Short <- Corpus.Short %>%
   separate(col = AF, into = paste0("author_", 1:10), sep = ";", remove = FALSE, extra = "drop")
 ```
 
+<span class ="comment">On a peut être besoin en amont de compter le nombre maximum d'auteur ? Car en créant 10 colonnes, il est possible que dans certains cas extrêmes on a plus d'auteurs et l'on rassemblerait allors dans la 10e colonnes tous ces auterus. On doit pouvoir compter le nombre de points virgules dans chaque observation de la variable AFG, et ainsi connaître le nombre maximum d'auteurs (et donc le nombre de colonnes à créer).</span>
+
 Check to see if there are only missing values in one of the new column created
 
 ```{r}
@@ -62,6 +66,8 @@ for (i in 1:10) {
 
 print(results)
 ```
+
+<span class ="comment">Ce n'est pas évident de vérifier si notre spération avec le point virgule fonctionne de manière  systématique. Mais cela a l'air d'être pas mal ainsi</span>
 
 Delete white spaces in the new columns created
 
@@ -88,6 +94,8 @@ for (i in 1:10) {
 }
 ```
 
+<span class ="comment">Nickel tout ça!</span>
+
 Delete white spaces in columns f_name 
 
 ```{r}
@@ -97,6 +105,8 @@ for (i in 1:10) {
 ```
 
 Dataframe for probabilities for gender 
+
+<span class ="comment">Comment le package genderdata attribue-t-il une probabilité de genre à un prénom? J'imagine qu'il s'agit d'un algorithme qui est entraîné à partir d'un dictionnaire de prénom? Comment traite-t_il les valeurs de prénom qu'il ne connait pas? Comment les prénoms composés sont-ils compris par l'algorithme? Parfois nous avons des prénoms qui inclus juste une lettre du genre `John T.`, comment traite-t-il ce cas? </span>
 
 ```{r}
 get_gender_prob <- function(first_name) {
@@ -108,6 +118,19 @@ gender_proba <- lapply(Corpus.Short[, grepl("^f_name_", colnames(Corpus.Short))]
 gender_proba_df <- do.call(rbind, gender_proba)
 ```
 
+
+<span class ="comment">Ok! C'est super, on a bien avancé. Si je comprends bien, la commande get_gender_proba nous a donc  </span> 
+
+Je fais quelques commandes ci-dessous pour comprendre:
+
+```{r}
+test1 = get_gender_prob(Corpus.Short$f_name_1)
+length(unique(Corpus.Short$f_name_1))
+# Test 1 contient plus de valeur qu'il n'y a de prénom "unique". Car il répète plusieurs fois le même prénom
+length(unique(test1$name)) # Mais on a quand même beaucoup moins de prénoms différents dans test1; L'algorithme de la commange get_gender_prob doit donc associé des prénoms similaires entre eux
+```
+
+<span class ="comment">C'est vraiment pas mal! On a bien avancé, je pense que l'on a encore quelques nettoyages/compréhensions à préciser avant de pouvoir faire des statistiques descriptives mais c'est déjà bien. Une fois que l'on aura bien compris comment fonctionne ce calcule de probabilité, il va falloir que l'on assigne à chaque article sa "part" d'auteurs femmes. On pourra ensuite faire des statistiques descriptives (évolution par année, cas des articles CC vs autres articles d'économie, cas de ceertains journaux...)</span>
 
 ```{r}
 # table(Corpus$CC)
