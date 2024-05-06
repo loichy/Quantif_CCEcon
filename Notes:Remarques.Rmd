@@ -26,8 +26,11 @@ output: html_document
 
     **3.1. Geographical concentration analysis :**
 
--    Comparison between low-income and high-income countries based on the **location of the authors**
+-   Comparison between low-income and high-income countries based on the **location of the authors**
 
+```{=html}
+<!-- -->
+```
     -   Share of all publications by author regional affiliation(s) : mainly USA and non-USA advanced countries
 
     -   Distribution of frontier economics research vs global economic activity in **top-10 journals**
@@ -68,14 +71,14 @@ output: html_document
 
 -   Graphics: Top 10 most cited publication in data set by authors / average number of citations per year by fields
 
--   Citation trends by region : proportion and evolution of authors cited from a certain nationality. \
+-   Citation trends by region : proportion and evolution of authors cited from a certain nationality.\
     Main result : articles written by the USA authors receive about 50% more citations
 
 -   Comparison of the proportion of articles cited in a region and the proportion of total articles in the region
 
 4.  **Econometric/regression analysis and results :** proportion of articles published in **top journals by regions.**
 
-USA-affiliated authors receive more citations and a higher share of these are published in top 10 journals. This can be due to selection effect e.g. authors in advanced economies publish higher quality articles so they have more citations. \
+USA-affiliated authors receive more citations and a higher share of these are published in top 10 journals. This can be due to selection effect e.g. authors in advanced economies publish higher quality articles so they have more citations.\
 \
 This is why the authors estimate the probability of being published in a top 10 journal (dependent variable) by using : the location as an explanatory variable of interest, a **proxy control for article quality = citations** per year and fixed effects by year.
 
@@ -101,8 +104,8 @@ Results :
 
 -   Data : Web of Science / EconLit database because it included Journal of Economic Literature codes, used to classify papers into economics fields.
 
--   Documenting levels and trends in overall influence by disciplines. \
-    To do so, they need to define disciplines : non economics disciplines such as sociology or psychology and non-social-science discipline such as mathematics or medicine. \
+-   Documenting levels and trends in overall influence by disciplines.\
+    To do so, they need to define disciplines : non economics disciplines such as sociology or psychology and non-social-science discipline such as mathematics or medicine.\
     Each journal corresponds to **one** discipline.
 
 -   Explore types of economic research that seem responsible for increasing extramural influence.
@@ -127,7 +130,7 @@ Results :
 
 1.  Idées - Analyse **géographique** :
 
--   Analyser la représentation des articles publiés dans les meilleures revues non pas en étudiant la localisation des auteurs, mais en se concentrant sur leur **nationalité** (ce qui peut nous permettre d'aller plus loin que ce qui existe déjà dans la littérature). \
+-   Analyser la représentation des articles publiés dans les meilleures revues non pas en étudiant la localisation des auteurs, mais en se concentrant sur leur **nationalité** (ce qui peut nous permettre d'aller plus loin que ce qui existe déjà dans la littérature).\
     Peut-être que ce n'est pas possible au vu des données (pas d'information sur l'origine nationale des auteurs, il me semble, et cela peut être assez compliqué à construire).
 
     2.  Idées - Analyse des **citations** :
@@ -138,9 +141,8 @@ Results :
 
     3.  Idées - Analyse **économétrique** : essayer d'établir certaines corrélations voire des causalités une fois que l'on a réalisé ces premières analyses
 
-```{=html}
 <!-- -->
-```
+
 -   Ajouter d'autres variables issues d'autres bases de données (ex: World Bank - GDP) pour essayer d'expliquer certaines observations, à l'image de l'article "The Global Distribution of Authorship in Economic Journals" qui compare la part du pays dans le GDP vs la part du pays dans la recherche économique.
 
     -   Ex pour le genre : comparer les différences de parités dans les auteurs entre les pays selon différents niveaux d'éducation (est-ce que ce manque de parité dans ce pays est dû à un niveau d'éducation plus faible chez les femmes/ou d'autres facteurs auxquels on pourrait réfléchir).
@@ -149,9 +151,8 @@ Results :
 
         4.  Questions qui me sont venu en lisant :
 
-```{=html}
 <!-- -->
-```
+
 -   Quel est le but derrière des analyses de genre et des analyses de concentration géographique ?
 
     -   Pour le genre : Est-ce pour constater des inégalités de genre au sein de la recherche économique sur l'économie du climat, et si oui essayer de l'expliquer économétriquement pour établir des liens de causalité ?
