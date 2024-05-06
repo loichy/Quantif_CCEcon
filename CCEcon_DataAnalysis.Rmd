@@ -44,19 +44,41 @@ load(here(dir$prep.data,"Corpus_Short.Rdata"))
 
 ## Gender 
 
-Creation of new columns for each author and for each article : separation of the column "AF" into several columns. New columns are entitled "auteur_" and goes from 1 to 10 (1 if there is only 1 author and 10 if there are 10 authors)
+Creation of new columns for each author and for each article : separation of the column "AF" into several columns. New columns are entitled "author_" and goes from 1 to 10 (1 if there is only 1 author and 10 if there are 10 authors)
+
+Step 1 : count the number of authors maximum (count the number of semicolon in each obs of the AF variable) : ici je ne comprends pas trop ce qui se passe car il semble y avoir un nombre très important d'articles avec plus de 10 auteurs (1999 je crois) mais lorsque nous créons la colonne 'author_11" qui répertorie ces articles et le nom des auteurs et que nous l'affichons (cf dernière ligne de code), il y a seulement quelques auteurs par lignes (et non pas + de 10)
 
 ```{r}
+# Creation of a new column to count the number of authors per article 
+Corpus.Short$nb_authors <- str_count(Corpus.Short$AF, ";") + 1
+
+# Display the 1000 largest values in the "nb_authors" column to see the maximum number of authors in the database 
+top_1000_max_authors <- head(sort(Corpus.Short$nb_authors, decreasing = TRUE), 1000)
+print(top_1000_max_authors)
+
+# Creation of the columns for the authors. 
+# The last one (author_11) contains names of the authors for articles that have more than 10 authors (roughly 1500)
+
 Corpus.Short <- Corpus.Short %>%
-  separate(col = AF, into = paste0("author_", 1:10), sep = ";", remove = FALSE, extra = "drop")
+  separate(col = AF, into = paste0("author_", 1:11), sep = ";", remove = FALSE, extra = "drop") %>%
+  mutate(author_11 = ifelse(nb_authors > 10, paste(author_11, author_10, sep = ";"), NA_character_)) %>%
+  select(-nb_authors)
+
+# Display lines of the colomn "author_11" that do not contain missing values to see if it works
+
+Corpus.Short %>%
+  filter(!is.na(author_11)) %>%
+  select(author_11)
 ```
+
+Step 2 : Checks and cleaning 
 
 Check to see if there are only missing values in one of the new column created
 
 ```{r}
-results<- vector("logical", length = 10)
+results<- vector("logical", length = 11)
 
-for (i in 1:10) {
+for (i in 1:11) {
   results[i] <- all(is.na(Corpus.Short[[paste0("author_", i)]]))
 }
 
@@ -66,7 +88,7 @@ print(results)
 Delete white spaces in the new columns created
 
 ```{r}
-for (i in 1:10) {
+for (i in 1:11) {
   Corpus.Short[[paste0("author_", i)]] <- str_trim(Corpus.Short[[paste0("author_", i)]])
 }
 ```
@@ -74,7 +96,7 @@ for (i in 1:10) {
 Delete parenthesis and figures in each columns created 
 
 ```{r}
-for (i in 1:10) {
+for (i in 1:11) {
   Corpus.Short[[paste0("author_", i)]] <- gsub("\\s*\\([^\\)]+\\)", "", Corpus.Short[[paste0("author_", i)]])
 }
 ```
@@ -82,7 +104,7 @@ for (i in 1:10) {
 Create a column for each last name and first name 
 
 ```{r}
-for (i in 1:10) {
+for (i in 1:11) {
   Corpus.Short <- Corpus.Short %>%
     separate(col = paste0("author_", i), into = c(paste0("l_name_", i), paste0("f_name_", i)), sep = ",", remove = FALSE, extra = "drop")
 }
@@ -91,15 +113,16 @@ for (i in 1:10) {
 Delete white spaces in columns f_name 
 
 ```{r}
-for (i in 1:10) {
+for (i in 1:11) {
   Corpus.Short[[paste0("f_name_", i)]] <- str_trim(Corpus.Short[[paste0("f_name_", i)]])
 }
 ```
 
-Dataframe for probabilities for gender 
+Step 3 : Dataframe for probabilities for gender 
 
 ```{r}
-get_gender_prob <- function(first_name) {
+get_gender_prob <- function(first_name) 
+  {
   gender(first_name)
 }
 
@@ -113,7 +136,6 @@ gender_proba_df <- do.call(rbind, gender_proba)
 # table(Corpus$CC)
 table(Corpus.Short$CC)
 ```
-
 
 ## Citation data
 
