@@ -9,11 +9,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
-<meta name="author" content />
+<meta name="author" content="Manon Eluard" />
 
-<meta name="date" content="2024-09-04" />
+<meta name="date" content="2024-04-03" />
 
-<title>Quantifying interactions between economics of climate change, the rest of economics and other disciplines</title>
+<title>Notes/Remarques</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -351,178 +351,362 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">Quantifying interactions between economics
-of climate change, the rest of economics and other disciplines</h1>
-<h4 class="author"></h4>
-<h4 class="date">09/04/24</h4>
+<h1 class="title toc-ignore">Notes/Remarques</h1>
+<h4 class="author">Manon Eluard</h4>
+<h4 class="date">2024-04-03</h4>
 
 </div>
 
 
-<div id="preliminary-data-analysis" class="section level1">
-<h1>Preliminary data analysis</h1>
-<div id="authorship-data-gender-and-affiliation" class="section level2">
-<h2>Authorship data: gender and affiliation</h2>
-<p>Affiliation data <code>C1</code>and <code>RP</code> variables. We’d
-like to identify each countries in which authors of the articles are
-affiliated. Thus, we’d like to create a variable “country” which list
-each country referenced in the <code>C1</code>and
-<code>RP</code>variables.</p>
-<p>You can focus on climate related articles</p>
-<pre class="r"><code>### First load data:
-load(here(dir$prep.data,&quot;Corpus_Short.Rdata&quot;))</code></pre>
-</div>
-<div id="gender" class="section level2">
-<h2>Gender</h2>
-<p>Creation of new columns for each author and for each article :
-separation of the column “AF” into several columns. New columns are
-entitled “auteur_” and goes from 1 to 10 (1 if there is only 1 author
-and 10 if there are 10 authors)</p>
-<pre class="r"><code>Corpus.Short &lt;- Corpus.Short %&gt;%
-  separate(col = AF, into = paste0(&quot;author_&quot;, 1:10), sep = &quot;;&quot;, remove = FALSE, extra = &quot;drop&quot;)</code></pre>
-<pre><code>## Warning: Expected 10 pieces. Missing pieces filled with `NA` in 603838 rows [1, 2, 3, 4,
-## 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, ...].</code></pre>
-<p><span class="comment">On a peut être besoin en amont de compter le
-nombre maximum d’auteur ? Car en créant 10 colonnes, il est possible que
-dans certains cas extrêmes on a plus d’auteurs et l’on rassemblerait
-allors dans la 10e colonnes tous ces auterus. On doit pouvoir compter le
-nombre de points virgules dans chaque observation de la variable AFG, et
-ainsi connaître le nombre maximum d’auteurs (et donc le nombre de
-colonnes à créer).</span></p>
-<p>Check to see if there are only missing values in one of the new
-column created</p>
-<pre class="r"><code>results&lt;- vector(&quot;logical&quot;, length = 10)
+<div id="i.-article-the-global-distribution-of-authorship-in-economics-journals---notes" class="section level3">
+<h3>I. Article : “The Global distribution of Authorship in Economics
+Journals” - Notes</h3>
+<ol style="list-style-type: decimal">
+<li><p><strong>General idea</strong></p>
+<p><br />
+Global distribution of authorship in economic journals by
+country/region, by quality of journal, and by <strong>several</strong>
+fields of specialization<br />
+</p></li>
+<li><p><strong>Points of methodology</strong></p></li>
+</ol>
+<ul>
+<li><p>Data : Web of Science</p></li>
+<li><p>Weights for cases where there are multiple authors for an
+article/and or multiple institutional affiliations</p></li>
+<li><p>Measure of the regions : three possible regions for an author’s
+affiliation = USA ; non-USA advanced economy ; developing economy.
+Authors are allocated to countries based on the <em>location of their
+institutional affiliations</em>. <span class="comment"> I wonder if they
+say something about an author having multiple affiliation. I guess they
+take all of the affiliations (or do they take the first
+one?).</span></p></li>
+<li><p>Measures of the citations (two alternatives) : citations per year
+since publication / citations in the first five years following
+publication <span class="comment">We can measure the former (we have the
+total citations and the year of publication, so we can measure the
+number of citations per year. But I wonder how they measure the latter.
+Do they say something: if they have the variable as such in their data?
+Maybe it’s actually a variable in the Web of Science data that we have
+as well in the dictionnary.</span></p></li>
+</ul>
+<ol start="3" style="list-style-type: decimal">
+<li><p><strong>Results</strong></p>
+<p><strong>3.1. Geographical concentration analysis :</strong></p></li>
+</ol>
+<ul>
+<li><p>Comparison between low-income and high-income countries based on
+the <strong>location of the authors</strong></p></li>
+<li><p>Share of all publications by author regional affiliation(s) :
+mainly USA and non-USA advanced countries</p></li>
+<li><p>Distribution of frontier economics research vs global economic
+activity in <strong>top-10 journals</strong></p></li>
+</ul>
+<p><span class="comment">I’m just curious to know how they’ve measured
+their top-10 journals, and their top-100</span></p>
+<pre><code>-   Regional distribution of authorship in top 10 journals: distribution highly skewed towards the rich regions of the world. This degree of concentration is difficult to explain by economic resources (distribution of the GDP across countries). Imbalance particularly striking for East and South Asia.
 
-for (i in 1:10) {
-  results[i] &lt;- all(is.na(Corpus.Short[[paste0(&quot;author_&quot;, i)]]))
-}
+    -   Evolution of regional shares in GDP/frontier economic research over time:
 
-print(results)</code></pre>
-<pre><code>##  [1] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE</code></pre>
-<p><span class="comment">Ce n’est pas évident de vérifier si notre
-spération avec le point virgule fonctionne de manière systématique. Mais
-cela a l’air d’être pas mal ainsi</span></p>
-<p>Delete white spaces in the new columns created</p>
-<pre class="r"><code>for (i in 1:10) {
-  Corpus.Short[[paste0(&quot;author_&quot;, i)]] &lt;- str_trim(Corpus.Short[[paste0(&quot;author_&quot;, i)]])
-}</code></pre>
-<p>Delete parenthesis and figures in each columns created</p>
-<pre class="r"><code>for (i in 1:10) {
-  Corpus.Short[[paste0(&quot;author_&quot;, i)]] &lt;- gsub(&quot;\\s*\\([^\\)]+\\)&quot;, &quot;&quot;, Corpus.Short[[paste0(&quot;author_&quot;, i)]])
-}</code></pre>
-<p>Create a column for each last name and first name</p>
-<pre class="r"><code>for (i in 1:10) {
-  Corpus.Short &lt;- Corpus.Short %&gt;%
-    separate(col = paste0(&quot;author_&quot;, i), into = c(paste0(&quot;l_name_&quot;, i), paste0(&quot;f_name_&quot;, i)), sep = &quot;,&quot;, remove = FALSE, extra = &quot;drop&quot;)
-}</code></pre>
-<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 3465 rows [115, 164, 179,
-## 687, 707, 741, 788, 808, 810, 876, 915, 930, 942, 1026, 1059, 1067, 1341, 1403,
-## 1563, 1646, ...].</code></pre>
-<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 2072 rows [185, 754, 759,
-## 830, 857, 915, 930, 932, 943, 1006, 1039, 1065, 1415, 1510, 1563, 1568, 1721,
-## 1878, 2123, 2133, ...].</code></pre>
-<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 1424 rows [788, 915,
-## 1042, 1057, 1297, 1357, 1473, 1628, 1645, 1878, 1886, 2123, 2233, 2259, 2315,
-## 2413, 2472, 2574, 2575, 2580, ...].</code></pre>
-<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 778 rows [759, 1057,
-## 1450, 1585, 1628, 1674, 1878, 2142, 2151, 2170, 2255, 2315, 2478, 2509, 2566,
-## 16551, 17283, 17349, 17399, 18180, ...].</code></pre>
-<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 392 rows [883, 885, 906,
-## 2259, 2298, 2315, 2435, 2456, 2480, 15528, 16551, 16910, 35246, 41011, 41025,
-## 41062, 41186, 42790, 43178, 44626, ...].</code></pre>
-<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 238 rows [885, 37779,
-## 41011, 41062, 42790, 44626, 45062, 45529, 66563, 67860, 72627, 72628, 72629,
-## 72630, 72631, 72794, 78779, 82309, 82310, 101783, ...].</code></pre>
-<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 42 rows [1026, 2388,
-## 15525, 40412, 72627, 72628, 72629, 72630, 72631, 72794, 82309, 82310, 82847,
-## 176874, 209620, 209697, 239389, 251669, 255275, 261149, ...].</code></pre>
-<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 29 rows [72627, 72628,
-## 72629, 72630, 72631, 72794, 80917, 82309, 82310, 157643, 206118, 206935,
-## 209026, 209697, 217063, 242165, 257253, 258135, 260181, 261447, ...].</code></pre>
-<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 25 rows [956, 72627,
-## 72628, 72629, 72630, 72631, 72794, 82310, 169358, 206935, 209697, 221231,
-## 242183, 270593, 277931, 284830, 323079, 455150, 469749, 493238, ...].</code></pre>
-<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 14 rows [72627, 72628,
-## 72629, 72630, 72631, 72794, 101594, 270593, 271017, 284830, 323079, 493238,
-## 534528, 570608].</code></pre>
-<p><span class="comment">Nickel tout ça!</span></p>
-<p>Delete white spaces in columns f_name</p>
-<pre class="r"><code>for (i in 1:10) {
-  Corpus.Short[[paste0(&quot;f_name_&quot;, i)]] &lt;- str_trim(Corpus.Short[[paste0(&quot;f_name_&quot;, i)]])
-}</code></pre>
-<p>Dataframe for probabilities for gender</p>
-<p><span class="comment">Comment le package genderdata attribue-t-il une
-probabilité de genre à un prénom? J’imagine qu’il s’agit d’un algorithme
-qui est entraîné à partir d’un dictionnaire de prénom? Comment
-traite-t_il les valeurs de prénom qu’il ne connait pas? Comment les
-prénoms composés sont-ils compris par l’algorithme? Parfois nous avons
-des prénoms qui inclus juste une lettre du genre <code>John T.</code>,
-comment traite-t-il ce cas? </span></p>
-<pre class="r"><code>get_gender_prob &lt;- function(first_name) {
-  gender(first_name)
-}
+        -   USA top 1 since a long time
 
-gender_proba &lt;- lapply(Corpus.Short[, grepl(&quot;^f_name_&quot;, colnames(Corpus.Short))], get_gender_prob)
+        -   Gains made by other advanced economies (non-USA advanced).
 
-gender_proba_df &lt;- do.call(rbind, gender_proba)</code></pre>
-<p><span class="comment">Ok! C’est super, on a bien avancé. Si je
-comprends bien, la commande get_gender_proba nous a donc </span></p>
-<p>Je fais quelques commandes ci-dessous pour comprendre:</p>
-<pre class="r"><code>test1 = get_gender_prob(Corpus.Short$f_name_1)
-length(unique(Corpus.Short$f_name_1))</code></pre>
-<pre><code>## [1] 111424</code></pre>
-<pre class="r"><code># Test 1 contient plus de valeur qu&#39;il n&#39;y a de prénom &quot;unique&quot;. Car il répète plusieurs fois le même prénom
-length(unique(test1$name)) # Mais on a quand même beaucoup moins de prénoms différents dans test1; L&#39;algorithme de la commange get_gender_prob doit donc associé des prénoms similaires entre eux</code></pre>
-<pre><code>## [1] 12218</code></pre>
-<p><span class="comment">C’est vraiment pas mal! On a bien avancé, je
-pense que l’on a encore quelques nettoyages/compréhensions à préciser
-avant de pouvoir faire des statistiques descriptives mais c’est déjà
-bien. Une fois que l’on aura bien compris comment fonctionne ce calcule
-de probabilité, il va falloir que l’on assigne à chaque article sa
-“part” d’auteurs femmes. On pourra ensuite faire des statistiques
-descriptives (évolution par année, cas des articles CC vs autres
-articles d’économie, cas de ceertains journaux…)</span></p>
-<pre class="r"><code># table(Corpus$CC)
-table(Corpus.Short$CC)</code></pre>
-<pre><code>## 
-##      0      1 
-## 581500  25452</code></pre>
+        -   The problem of under-representation of developing countries in top research publications has been getting worse over time
+
+-   Trends in geographical concentration according to **different categories of journal quality** :
+
+    -   The lower the quality raking of a journal, the higher non-USA representation
+
+    -   Non-USA advanced economies have generally made progress across all journal categories
+
+    -   Progress also for developing countries but mainly in the top 100 journal, of lower quality and least prestigious)
+
+    -   Differences across developing countries. Ex : increasing representation for East Asia especially China, due to the economic rise of the region, and a drop for MENA regions.</code></pre>
+<p><span class="comment">I wonder if tey document a bit more the Chinese
+rise. How does it compare in terms of percentage increase to other
+countries? In any case, that’s something we could document better in out
+project.</span></p>
+<pre><code>    **3.2.** Trends across different **journals by fields**</code></pre>
+<ul>
+<li><p>Increase of <em>non-USA advanced country</em> authors in many
+fields (development, econometrics…) and <em>decline for USA
+authors</em>.</p></li>
+<li><p>Analysis for top 100 journals :</p>
+<ul>
+<li><p>In several fields (finance, micro…) USA authors continue to have
+the largest share.</p></li>
+<li><p>For developing countries : no fields where they seem to have made
+significant gains.</p>
+<p>Rq: stated result contradicts the figures given in the table (table
+4) where we see an increase in the share (in percentage points) of
+developing countries in journals in almost every field, so I don’t
+understand.</p>
+<p><span class="comment">You’re right, I think their interpreations
+don’t go enough in the details. It seems that US is losing share wrt
+non-USA advanced, and wrt to Developing (especially China)</span></p>
+<p><strong>3.3. Citation</strong> analysis :</p></li>
+</ul></li>
+<li><p>Graphics: Top 10 most cited publication in data set by authors /
+average number of citations per year by fields</p></li>
+<li><p>Citation trends by region : proportion and evolution of authors
+cited from a certain nationality.<br />
+Main result : articles written by the USA authors receive about 50% more
+citations</p></li>
+<li><p>Comparison of the proportion of articles cited in a region and
+the proportion of total articles in the region</p></li>
+</ul>
+<ol start="4" style="list-style-type: decimal">
+<li><strong>Econometric/regression analysis and results :</strong>
+proportion of articles published in <strong>top journals by
+regions.</strong></li>
+</ol>
+<p>USA-affiliated authors receive more citations and a higher share of
+these are published in top 10 journals. This can be due to selection
+effect e.g. authors in advanced economies publish higher quality
+articles so they have more citations.<br />
+<br />
+This is why the authors estimate the probability of being published in a
+top 10 journal (dependent variable) by using : the location as an
+explanatory variable of interest, a <strong>proxy control for article
+quality = citations</strong> per year and fixed effects by year.</p>
+<p>Second step : Use of an instrumental variable (?) = citations :
+explained by the location (explanatory variable) journal field, journal
+rank group and fixed effects by year.</p>
+<p><span class="comment">I’m not sure I get why there is endogeneity
+here and how do they treat this?</span></p>
+<p>Results :</p>
+<ul>
+<li><p>Articles by authors located outside the USA have a lower
+probability of being published in a top 10 journal, even for controle
+for article quality (citations).</p></li>
+<li><p>Developing country authorship negatively associated with the
+likelihood for an article being published in top journal</p></li>
+<li><p>Analysis of this evolution over time : increase in
+energy/environment/agriculture journals for developing countries vs no
+increase in development and international (surprisingly).</p></li>
+</ul>
+<p><span class="comment">OK, so I guess, their regression analysis does
+not add much value tot their descriptive analysis of the data, as it
+gives the same statistical associations between place of origins and
+qualiy of publications.</span></p>
 </div>
-<div id="citation-data" class="section level2">
-<h2>Citation data</h2>
-<div id="clean-citation-data" class="section level3">
-<h3>Clean citation data</h3>
-<p>Prepare citation data. We want to create a database, where for each
-article (one raw in <code>Corpus</code>), we have a data frame with its
-cited articles. (one raw by references). We want to separate information
-on the authors of the cited articles, the title of the article, the year
-of publication, and the journal.</p>
-<p>First work with one of the datasource: let’s say Wos.</p>
-<pre class="r"><code>gc()</code></pre>
-<pre><code>##             used   (Mb) gc trigger   (Mb)  max used   (Mb)
-## Ncells  12921748  690.1   26408572 1410.4  26408572 1410.4
-## Vcells 317965565 2425.9  477935352 3646.4 477935304 3646.4</code></pre>
-<pre class="r"><code>load(here(dir$prep.data,&quot;Wos_Short.Rdata&quot;))
-head(Wos.Econ.Short$CR)</code></pre>
-<pre><code>## [1] &quot;Apostolato I.-A., 2013, INT REV SOCIAL RES, V3, DOI [10.1515/irsr-2013-0023, DOI 10.1515/IRSR-2013-0023]; Aynaud, 2013, GRAPH PARTITIONING, P315, DOI [10.1002/9781118601181.ch13, DOI 10.1002/9781118601181.CH13]; Baron J., 2019, JRC SCI POLICY REPOR; Baron J, 2018, J ECON MANAGE STRAT, V27, P462, DOI 10.1111/jems.12257; Baron J, 2013, J COMPET LAW ECON, V9, P905, DOI 10.1093/joclec/nht034; Batagelj V, 2004, MATH VIS, P77; Bekkers R, 2012, TECHNOL FORECAST SOC, V79, P1192, DOI 10.1016/j.techfore.2012.01.009; Bekkers R, 2011, RES POLICY, V40, P1001, DOI 10.1016/j.respol.2011.05.004; Blind K., 2003, Netnomics, V5, P71, DOI 10.1023/A:1024950302713; Blondel VD, 2008, J STAT MECH-THEORY E, DOI 10.1088/1742-5468/2008/10/P10008; Braveman B., 2013, STANDARD SETTI UNPUB; Burt RS, 1992, STRUCTURAL HOLES SOC; Chiao B, 2007, RAND J ECON, V38, P905, DOI 10.1111/j.0741-6261.2007.00118.x; Clarkson, 2004, THESIS HARVARD BUSIN; Contreras J.L., 2017, CAMBRIDGE HDB TECHNI; Contreras JL, 2019, RES HANDB LAW ECON, P185; De Nooy W., 2018, EXPLORATORY SOCIAL N; Epstein RA, 2013, COMPET POLICY INT, V9, P69; FARRELL J, 1988, RAND J ECON, V19, P235, DOI 10.2307/2555702; Farrell J, 2007, ANTITRUST LAW J, V74, P603; FREEMAN LC, 1979, SOC NETWORKS, V1, P215, DOI 10.1016/0378-8733(78)90021-7; Gmati H, 2019, PROCEDIA COMPUT SCI, V159, P313, DOI 10.1016/j.procs.2019.09.186; Goel RK, 2020, Q REV ECON FINANC, V76, P97, DOI 10.1016/j.qref.2019.03.006; Goel RK, 2020, J TECHNOL TRANSFER, V45, P481, DOI 10.1007/s10961-018-9708-y; Goel RK, 2009, J TECHNOL TRANSFER, V34, P637, DOI 10.1007/s10961-009-9119-1; GOEL RK, 2002, ECON INTEGRATION, V55, P17; Jiang JM, 2019, J TECHNOL TRANSFER, V44, P1070, DOI 10.1007/s10961-017-9645-1; KINDLEBERGER CP, 1983, KYKLOS, V36, P377, DOI 10.1111/j.1467-6435.1983.tb02705.x; LANCICHINETTI A, 2009, PHYS REV E 2, V80, DOI DOI 10.1103/PHYSREVE.80.056117; Lerner J, 2006, AM ECON REV, V96, P1091, DOI 10.1257/aer.96.4.1091; Lerner J, 2015, J POLIT ECON, V123, P547, DOI 10.1086/680995; Leydesdorff L, 2006, J AM SOC INF SCI TEC, V57, P1616, DOI 10.1002/asi.20335; Lusher D., 2013, EXPONENTIAL RANDOM G; Maskus K., 2014, PATENT CHALLENGES ST, DOI 10.17226/18510; Newman MEJ, 2004, PHYS REV E, V70, DOI [10.1103/PhysRevE.70.056131, 10.1103/PhysRevE.69.026113]; Rotta R., 2011, J EXP ALGORITHMICS, V16, p2.1, DOI DOI 10.1145/1963190.1970376; Schmoch U., 2003, CONTRACT N HPV2 CT 2; Scotchmer S., 2004, INNOVATION INCENTIVE; Spulber DF, 2019, ECON J, V129, P1477, DOI 10.1111/ecoj.12606; Updegrove A., 2012, S MAN INT PROP STAND; Wolfe AW, 1997, AM ETHNOL, V24, P219, DOI 10.1525/ae.1997.24.1.219; Wooldridge JM, 2010, ECONOMETRIC ANALYSIS OF CROSS SECTION AND PANEL DATA, 2ND EDITION, P3&quot;
-## [2] &quot;Baldwin J. R., 2000, FAILURE RATES NEW CA; Barber BM, 2001, Q J ECON, V116, P261, DOI 10.1162/003355301556400; Bernardo AE, 2001, J ECON MANAGE STRAT, V10, P301, DOI 10.1111/j.1430-9134.2001.00301.x; Brennan MJ, 1999, ECON NOTES, V28, P119; Brenner LA, 1996, ORGAN BEHAV HUM DEC, V65, P212, DOI 10.1006/obhd.1996.0021; Bureau of Labor Statistics, 2019, BUS EMPL DYN SURV; Chen J., 2018, ADV OPT MAT, V6, P1; COOPER AC, 1995, J BUS VENTURING, V10, P107, DOI 10.1016/0883-9026(94)00022-M; DeGroot MH, 2004, OPTIMAL STAT DECISIO; Denrell J, 2003, ORGAN SCI, V14, P227, DOI 10.1287/orsc.14.3.227.15164; DUNNE T, 1989, J LABOR ECON, V7, P48, DOI 10.1086/298198; Hamilton BH, 2000, J POLIT ECON, V108, P604, DOI 10.1086/262131; Horvath M, 2001, INT J IND ORGAN, V19, P1023, DOI 10.1016/S0167-7187(01)00062-5; KAHNEMAN D, 1973, PSYCHOL REV, V80, P237, DOI 10.1037/h0034747; KIHLSTROM RE, 1979, J POLIT ECON, V87, P719, DOI 10.1086/260790; Klepper S, 2000, J POLIT ECON, V108, P728, DOI 10.1086/316100; Knight FH, 1921, RISK UNCERTAINTY PRO, P309; Lohrke FT, 2018, MANAGE DECIS, V56, P972, DOI 10.1108/MD-12-2016-0948; Lowe RA, 2006, MANAGE SCI, V52, P173, DOI 10.1287/mnsc.1050.0482; Puri M, 2007, J FINANC ECON, V86, P71, DOI 10.1016/j.jfineco.2006.09.003; Rabin M, 1998, J ECON LIT, V36, P11; Samuelson W., 1988, J RISK UNCERTAINTY, V1, P7, DOI DOI 10.1007/BF00055564; Schumpeter J., 1974, SOCIALISM DEMOCRACY; SELVIN S, 1976, ROY STAT SOC C-APP, V25, P8; Smith A., 2005, WEALTH NATIONS, P98; Thaler R., 1992, THE WINNERS CURSE; Van Den Steen E, 2004, AM ECON REV, V94, P1141, DOI 10.1257/0002828042002697&quot;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-## [3] &quot;Altera Invest, 2020, SAL READ MAD BUS FRA; [Anonymous], 2020, FRANCHISE CAPITAL; BURTON F, 2000, MANAGE INT REV, V40, P373; Combs JG, 1999, ACAD MANAGE J, V42, P196, DOI 10.2307/257092; CROSS J, 1995, HARVARD BUS REV, V73, P94; Franshiza.ru, 2020, CAT FRANCH; Gillis WE, 2020, J BUS VENTURING, V35, DOI 10.1016/j.jbusvent.2018.09.004; Gladilina I. P., 2019, INT J INNOVATIVE TEC, V9, P3892; International Franchise Association, 2020, OFF WEBS; Jang S, 2019, INT J HOSP MANAG, V76, P13, DOI 10.1016/j.ijhm.2018.06.004; Jerry D., 1999, COLLINS; Kang B, 2018, J SMALL BUS MANAGE, V56, P197, DOI 10.1111/jsbm.12404; Lafontaine F, 1999, J POLIT ECON, V107, P1041, DOI 10.1086/250090; Lapitskaya L., 2000, MARKETING, V3, P105; Laptev A. V., 2018, ESPACIOS, V39, P11; Lomakina N. A., 2020, LABOR SOCIAL RELATIO, V4, P36; Mayler A., 2003, BUSINESS EVERYONE, V10, P3; MILES RE, 1995, ORGAN DYN, V23, P5, DOI 10.1016/0090-2616(95)90013-6; Morkovina S. S., 2011, MECH NETWORK DEV ENT; Panyukova V. V., 2020, MARKETING RUSSIA ABR, V4, P58; REED SF, 1977, MERGERS ACQUISITIONS, V12, P4; Rosado-Serrano A, 2019, INT J RETAIL DISTRIB, V47, P752, DOI 10.1108/IJRDM-10-2018-0216; Sheresheva MY, 2006, ROSS ZH MENEDZH, V4, P55; Singer M.I., 1991, NONPROFIT MANAGEMENT, V1, P357; Sorokina I. O., 2009, FINANCE CREDIT, V378, P46; Spinelli S., 2007, FRANCHISING PATHWAY; Topfranchise, 2019, FRANCH WORLDW; Vargo SL, 2004, J MARKETING, V68, P1, DOI 10.1509/jmkg.68.1.1.24036; Vladimirova I. G., 1999, MANAGEMENT RUSSIA AB, V6, P15; Warren M., 2002, IEBM HDB MANAGEMENT; Watson A, 2020, IND MARKET MANAG, V89, P431, DOI 10.1016/j.indmarman.2020.03.005; WEBSTER FE, 1992, J MARKETING, V56, P1, DOI 10.2307/1251983&quot;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
-## [4] &quot;Ayanso A, 2014, INFORM TECHNOL DEV, V20, P60, DOI 10.1080/02681102.2013.797378; Polozhentseva Y, 2016, ECON ANN-XXI, V157, P15, DOI 10.21003/ea.V157-0004&quot;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
-## [5] &quot;Ain, 2020, MUCH FREEL EARN THEY; Amigud A, 2020, ASSESS EVAL HIGH EDU, V45, P541, DOI 10.1080/02602938.2019.1670780; Aseeva I., 2019, 34 INT BUS INF MAN A, P9679; Awdry R, 2019, HIGH EDUC, V78, P593, DOI 10.1007/s10734-019-00360-0; Birks M, 2020, INT J EDUC INTEGR, V16, DOI 10.1007/s40979-020-00055-5; Boev E., 2015, ASIAN SOCIAL SCI, V11, P328, DOI [10.5539/ass.v11n4p328, DOI 10.5539/ASS.V11N4P328]; Brimble M, 2005, AUST EDUC RES, V32, P19, DOI 10.1007/BF03216825; Byrne JA, 2020, FEBS LETT, V594, P583, DOI 10.1002/1873-3468.13747; Consultant, 2020, AV MONTHL WAG GEN RU; Curtis GJ, 2017, J ACAD ETHICS, V15, P115, DOI 10.1007/s10805-017-9278-x; Eaton S. E., 2019, ORTHOPAEDIC SURG CIT; Foltynek T, 2018, INT J EDUC INTEGR, V14, DOI 10.1007/s40979-018-0027-8; Ison DC, 2020, ONLINE LEARN, V24, P142, DOI 10.24059/olj.v24i2.2096; Johnson C, 2020, J ACAD ETHICS, V18, P105, DOI 10.1007/s10805-019-09358-w; Kalimullin T., 2006, WP4200602 HSE; Lancaster T., 2019, T LANCASTER BLOG POS; Lancaster T, 2020, INT J EDUC INTEGR, V16, DOI 10.1007/s40979-020-00053-7; Lancaster T, 2020, J ACAD ETHICS, V18, P115, DOI 10.1007/s10805-019-09357-x; Lancaster T, 2016, HANDBOOK OF ACADEMIC INTEGRITY, P639, DOI 10.1007/978-981-287-098-8_17; Matviychuk-Soskina N., 2016, PERSPECTIVES, V2, P85; Medway D, 2018, BRIT EDUC RES J, V44, P393, DOI 10.1002/berj.3335; Olenkova A., 2019, AVERAGE INCOME FREEL; Podgorny B., 2014, SOCIOLOGICAL STUDIES, V1, P40; Prostudenta, 2019, TOP 13 SIT REV IS BE; Ria.ru, 2020, MED SAL RUSS WAS 350; Shala S, 2020, INT J EDUC INTEGR, V16, DOI 10.1007/s40979-020-00061-7; Sivasubramaniam S, 2016, INT J EDUC INTEGR, V12, DOI 10.1007/s40979-016-0007-9; Wallace MJ, 2014, EDUC STUD-UK, V40, P233, DOI 10.1080/03055698.2014.889597&quot;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
-## [6] &quot;Ghodsi M, 2016, ESTIMATING IMPORTER; Ghodsi M., 2016, BILATERAL IMPORT ELA; Kee HL, 2009, ECON J, V119, P172; KENNEDY PE, 1981, AM ECON REV, V71, P801; SILVA JMS, 2006, REV ECON STAT, V88&quot;</code></pre>
-<p>Test</p>
-<pre class="r"><code>table(is.na(Wos.Econ.Short$CR))</code></pre>
-<pre><code>## 
-##  FALSE   TRUE 
-## 149184   4976</code></pre>
-<p>Test 2</p>
-<pre class="r"><code>table(is.na(Wos.Econ.Short$CR), Wos.Econ.Short$PY)</code></pre>
-<pre><code>##        
-##          2018  2019  2020  2021  2022  2023
-##   FALSE 30163 31178 30738 31229 25774   102
-##   TRUE   1463  1742   953   672   146     0</code></pre>
+<div id="ii.-article-inside-job-or-deep-impact-extramural-citations-and-the-influence-of-economic-scholarship---notes" class="section level3">
+<h3>II. Article : “Inside Job or Deep Impact? Extramural Citations and
+the Influence of Economic Scholarship” - Notes</h3>
+<ol style="list-style-type: decimal">
+<li><p>General idea<br />
+<br />
+The goal of this article, which is about the economics’ interactions
+with other disciplines, is to assess the influence of economic
+scholarship through extramural citations i.e the frequency with which
+other disciplines cite papers in economic journals.</p>
+<p><strong>Citations = measure of influence</strong><br />
+</p>
+<p><span class="comment">Do they look only at whether other disciplines
+use economics’ research articles, or also the other way around (how
+economics uses other disciplines’ research?)</span></p></li>
+<li><p>Points of methodology :</p></li>
+</ol>
+<ul>
+<li><p>Data : Web of Science / EconLit database because it included
+Journal of Economic Literature codes, used to classify papers into
+economics fields. <span class="comment">We don’t have yet all EconLit
+Journal of Economic Literature codes, but only for climate change
+related articles</span></p></li>
+<li><p>Documenting levels and trends in overall influence by
+disciplines.<br />
+To do so, they need to define disciplines : non economics disciplines
+such as sociology or psychology and non-social-science discipline such
+as mathematics or medicine.<br />
+Each journal corresponds to <strong>one</strong> discipline.</p></li>
+</ul>
+<p><span class="comment">I think here, we need a bit more details on how
+they define these disciplines, and how do they put a journal in one
+discipline.</span></p>
+<ul>
+<li><p>Explore types of economic research that seem responsible for
+increasing extramural influence.</p>
+<ul>
+<li><p>Machine learning to differentiate : fields (e.g macro or
+industrial organization) and “styles” theoretical/econometric/empirical
+papers.</p></li>
+<li><p>The authors also capture the evolution of the “styles” in
+economics (rise of empirical work for instance, due to the increased use
+of randomized trials and quasi-experimental research designs).</p></li>
+</ul></li>
+<li><p>Computation of the share of citations from discipline to a group
+of disciplines. Ex : the citation share from economics to the group of
+business disciplines is the sum of shares of economics cites to finance,
+marketing, management and accounting.</p></li>
+</ul>
+<p><span class="comment">Just to be sure, as it is the share, they
+compute the share at the article level (like if an articles has 50
+citations, whose 10 are in the business disciplines, which would mean
+that 20% of the citations share in this economic article are in
+reference to business disciplines? Or is it at another level (like the
+journal level?). </span></p>
+<ul>
+<li>Weighting scheme for the citations : weights emphasize journals that
+are important for the discipline studied.</li>
+</ul>
+<p><span class="comment">Maybe we need some details on the way they
+weight journals.</span></p>
+<ol start="3" style="list-style-type: decimal">
+<li>Results :</li>
+</ol>
+<ul>
+<li><p>Rise in the influence of economic research, especially growth in
+citations to <strong>empirical work</strong>.</p>
+<p>Especially, empirical economics is a cause of the increase in the
+extramural influence of economics : more accessible and reliable thanks
+to the use of data instead of theoretical hypothesis.</p></li>
+<li><p>Economics is increasingly likely to reference other social
+sciences</p></li>
+</ul>
 </div>
-</div>
+<div id="iii.-ideas" class="section level3">
+<h3>III. Ideas</h3>
+<ol style="list-style-type: decimal">
+<li>Idées - Analyse <strong>géographique</strong> :</li>
+</ol>
+<ul>
+<li><p>Analyser la représentation des articles publiés dans les
+meilleures revues non pas en étudiant la localisation des auteurs, mais
+en se concentrant sur leur <strong>nationalité</strong> (ce qui peut
+nous permettre d’aller plus loin que ce qui existe déjà dans la
+littérature).<br />
+Peut-être que ce n’est pas possible au vu des données (pas d’information
+sur l’origine nationale des auteurs, il me semble, et cela peut être
+assez compliqué à construire).</p>
+<p><span class="comment">En effet, cela peut être intéressant de croiser
+affiliationn ET nationalité. D’autant plus que l’on peut imaginer que
+bcp d’auteurs affiliés dans des pays développés ne sont pas de la
+nationalité de ces pays. On peut imaginer que leurs recherches peuvent
+servir d’autres intérêts. On pourra imaginer plus tard un algorithme
+nous permettant d’obtenir la nationalité des auteurs (j’ai quelques
+idées).</span></p>
+<ol start="2" style="list-style-type: decimal">
+<li>Idées - Analyse des <strong>citations</strong> :</li>
+</ol></li>
+<li><p>Analyser le “<strong>home-country effect</strong>”, à l’image de
+l’article “The Global Distribution of Authorship in Economic Journals”,
+c’est à dire le fait que les auteurs sont davantage susceptibles de
+citer des articles provenant de leurs pays “domestiques”.</p></li>
+</ul>
+<p><span class="comment">Si l’on envisage une analyse économétrique des
+citations en économie du changement climatique, cela peut être un point
+important. Possible qu’au sujet du changement climatique, en tant que
+problème de pollution global avec des problématiques locales, le home
+country effect ait un rôle ambigu. </span></p>
+<ul>
+<li>Quantifier les citations d’articles en économie vers d’autres
+articles qui se concentrent sur l’économie du climat et inversement. Le
+faire pour chaque discipline envers l’économie du climat et l’économie
+du climat envers chaque discipline.</li>
+</ul>
+<p><span class="comment">C’est toute l’idée du projet. D’autant plus que
+c’est un champ de l’économie qui se voudrait plus
+multidisciplinaire/transdisciplinaire que les autres. Nous aurions donc
+cet article comme point de comparaison du degré d’ouverture aux autres
+disciplines des différents champs de l’économie. On pourrait alors
+regarder en quoi le chanmp de l’économie du changement climatique
+s’écarte/se rapproche de cela. </span></p>
+<pre><code>3.  Idées - Analyse **économétrique** : essayer d&#39;établir certaines corrélations voire des causalités une fois que l&#39;on a réalisé ces premières analyses</code></pre>
+<!-- -->
+<ul>
+<li><p>Ajouter d’autres variables issues d’autres bases de données (ex:
+World Bank - GDP) pour essayer d’expliquer certaines observations, à
+l’image de l’article “The Global Distribution of Authorship in Economic
+Journals” qui compare la part du pays dans le GDP vs la part du pays
+dans la recherche économique.</p>
+<ul>
+<li>Ex pour le genre : comparer les différences de parités dans les
+auteurs entre les pays selon différents niveaux d’éducation (est-ce que
+ce manque de parité dans ce pays est dû à un niveau d’éducation plus
+faible chez les femmes/ou d’autres facteurs auxquels on pourrait
+réfléchir).</li>
+</ul></li>
+</ul>
+<p><span class="comment">Dans le cas de la parité, on peut tout à fait
+envisager de croiser genre et niveau d’éducation (tableau croisé). Mais
+à mon avis, on risque surtout de capturer l’idée que les parcours
+d’étude sont systématiquement genrés, et donc d’avoir assez peu de
+différences entre pays (avec peut-être quelques exceptions). Cela vaudra
+toujours le coup d’étudier la question, avec aussi l’idée de comparer la
+question de la représentation de genre dans le cas de l’analyse
+économique du changmeent climatique, vis-à-vis du reste de l’économie,
+voir des autres disciplines. Est-ce qu’il y a relativement plus de
+femmes qui font partie des auteurs d’articles portant sur le changement
+climatique? Qu’est-ce que cela peut vouloir dire en termes de travaux de
+recherche (ici, nous pourrons lire des travaux sur les différences de
+traitement genrés dans la recherche en général, et en économie.)
+</span></p>
+<pre><code>-   Ex pour les citations : étudier les barrières d&#39;accès (asymétrie d&#39;informations) ou les exclusions dues à des réseaux qui sont fermés
+
+    4.  Questions qui me sont venu en lisant :</code></pre>
+<!-- -->
+<ul>
+<li><p>Quel est le but derrière des analyses de genre et des analyses de
+concentration géographique ?</p>
+<ul>
+<li>Pour le genre : Est-ce pour constater des inégalités de genre au
+sein de la recherche économique sur l’économie du climat, et si oui
+essayer de l’expliquer économétriquement pour établir des liens de
+causalité ?</li>
+</ul>
+<p><span class="comment">Je pense que je réponds en partie à ta question
+avec mon commentaire précédent. Il y a en effet une question de
+constattation/quantification. Mais il faudrit que l’on réfléchisse
+également à ce que cela voudrait dire pour cette recherche, le fait
+qu’elle soit très souvent mené par des hommes (en termes d’inclusivité
+des travux, d’études des impacts, cela entraîne nécessairement des biais
+que laa grande majorité de la recherche soit menés par des hommes). A ce
+sujet, il y a des travaux (menés par des femmes) qui montrent les
+inégalités de genre face au changement climatique. On pourra
+s’intéresser à ces questionns en parallèle que l’on quantifiera la place
+du genre dans la recherche en économie du changement
+climatique.</span></p>
+<ul>
+<li>Pour les régions : Est-ce que le but est de constater les inégalités
+entre les pays au niveau de l’avancement dans le domaine de la recherche
+économique et si oui essayer de l’expliquer économétriquement pour
+établir des liens de causalité ? Ou bien est-ce seulement pour faire un
+état des lieux des pays qui sont étudiés dans le domaine de l’économie
+du climat ? Cela peut être intéressant de faire les deux.</li>
+</ul></li>
+</ul>
+<p><span class="comment">Ici, le projet est bien de faire les deux.
+Quantifier la distribution géographique, et documenter des possibles
+inégalités (et aussi comparer le cas du changement climatique par
+rapport au reste de l’économie). Dans le cas du changement climatique,
+on pourrait faire une analyse assez proche de celle du premier article,
+où l’on compare la part des contributions des chercheurs selon leur
+origine (non pas à la part de leur pays dans l’économie mondiale) mais à
+la part de leur pays dans le changement climatique (soit en emissions de
+CO2 cumulés, soit également en efforts de réduction, ou bien encore en
+termes d’impacts à venir du changement climatique).</span></p>
+<ul>
+<li><p>Si j’ai bien compris lors de notre discussion, un des points
+intéressants dans ce travail de recherche est notamment d’étudier la
+répartition géographique/le genre des auteurs dans un domaine spécifique
+: l’économie du climat.</p>
+<p>Dans la mesure où ce travail a déjà été fait pour d’autres domaines,
+l’objectif final est-il de faire le même travail mais sur un sujet
+différent, à savoir l’économie du climat, ou de se concentrer sur
+plusieurs domaines de spécialisation en économie et d’ajouter des
+spécifications à l’étude de la répartition des auteurs (cf. par exemple
+étudier la dispersion géographique non seulement en étudiant la
+localisation des auteurs, mais aussi en étudiant la nationalité des
+auteurs).</p>
+<p><span class="comment">C’est bien ça l’idée! On se sert de ces travaux
+un peu plus généraux, pour appliquer ces questions au cas du traitement
+du changement climatique par les économistes. L’idée est bien de
+quantifier l’effort de recherche réalisés par les chercheurs dans ce
+champ, afin d’en faire un état des lieux et d’essayer de
+mesurer/identifier des enjeux d’inégalité / ou d’amélioration possible
+dans la manière d’effectuer la recherche.</span></p></li>
+</ul>
 </div>
 
 
