@@ -2,13 +2,14 @@
 title: "Quantifying interactions between economics of climate change, the rest of economics and other disciplines"
 author: ""
 date: "`r format(Sys.time(), '%d/%m/%y')`"
-output: html_document
+output: 
+  html_document:
+    css: styles.css
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
 
 ```{r setup, include=FALSE}
 # Clean memory 
@@ -17,7 +18,7 @@ gc()
 
 # Load package
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere, stringr, gender, genderdata)
+pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere, stringr, gender, genderdata, stringi, dplyr, tidyr)
 
 # List directories 
 dir <- list()
@@ -33,6 +34,7 @@ lapply(dir, function(i) dir.create(i, recursive = T, showWarnings = F))
 # Preliminary data analysis
 
 ## Authorship data: gender and affiliation
+
 Affiliation data `C1`and `RP` variables. We'd like to identify each countries in which authors of the articles are affiliated. Thus, we'd like to create a variable "country" which list each country referenced in the `C1`and `RP`variables. 
 
 You can focus on climate related articles
@@ -46,95 +48,261 @@ load(here(dir$prep.data,"Corpus_Short.Rdata"))
 
 Creation of new columns for each author and for each article : separation of the column "AF" into several columns. New columns are entitled "author_" and goes from 1 to 10 (1 if there is only 1 author and 10 if there are 10 authors)
 
-Step 1 : count the number of authors maximum (count the number of semicolon in each obs of the AF variable) : ici je ne comprends pas trop ce qui se passe car il semble y avoir un nombre très important d'articles avec plus de 10 auteurs (1999 je crois) mais lorsque nous créons la colonne 'author_11" qui répertorie ces articles et le nom des auteurs et que nous l'affichons (cf dernière ligne de code), il y a seulement quelques auteurs par lignes (et non pas + de 10)
-
 ```{r}
-# Creation of a new column to count the number of authors per article 
+# Creation of a new column "nb_authors" to count the number of authors per article
+
 Corpus.Short$nb_authors <- str_count(Corpus.Short$AF, ";") + 1
 
-# Display the 1000 largest values in the "nb_authors" column to see the maximum number of authors in the database 
+# Display the 1000 largest values in the "nb_authors" column to see the maximum number of authors in the database. There are roughly 1500 articles that have more than 10 authors (0.2 % of the total so not very important - I decide to do not take it into account for the moment and so to do not create a 11st column insofar as it does not represent a large part of the observations and I think the analysis and coding is more difficult with this column). 
+
 top_1000_max_authors <- head(sort(Corpus.Short$nb_authors, decreasing = TRUE), 1000)
 print(top_1000_max_authors)
 
-# Creation of the columns for the authors. 
-# The last one (author_11) contains names of the authors for articles that have more than 10 authors (roughly 1500)
+# Creation of the columns for the authors : each column correspond to an additional author for each article (author_1 if 1 author and author_10 if 10 authors, with one author per column). There are 603 838 missing values due to the fact that 603 838 articles have only 1 author. 
 
 Corpus.Short <- Corpus.Short %>%
-  separate(col = AF, into = paste0("author_", 1:11), sep = ";", remove = FALSE, extra = "drop") %>%
-  mutate(author_11 = ifelse(nb_authors > 10, paste(author_11, author_10, sep = ";"), NA_character_)) %>%
-  select(-nb_authors)
-
-# Display lines of the colomn "author_11" that do not contain missing values to see if it works
-
-Corpus.Short %>%
-  filter(!is.na(author_11)) %>%
-  select(author_11)
+  separate(col = AF, into = paste0("author_", 1:10), sep = ";", remove = FALSE, extra = "drop")
 ```
 
-Step 2 : Checks and cleaning 
+Step 2 : Checks, creation of columns for last and first names and cleaning 
 
-Check to see if there are only missing values in one of the new column created
+Check to see if there are no missing values in one of the new column created : OK
 
 ```{r}
-results<- vector("logical", length = 11)
+results<- vector("logical", length = 10)
 
-for (i in 1:11) {
+for (i in 1:10) {
   results[i] <- all(is.na(Corpus.Short[[paste0("author_", i)]]))
 }
 
 print(results)
 ```
 
-Delete white spaces in the new columns created
+Create a column for each last name (l_name) and first name (f_name). f_name will be used during all the analysis of the gender. 
 
 ```{r}
-for (i in 1:11) {
-  Corpus.Short[[paste0("author_", i)]] <- str_trim(Corpus.Short[[paste0("author_", i)]])
-}
-```
-
-Delete parenthesis and figures in each columns created 
-
-```{r}
-for (i in 1:11) {
-  Corpus.Short[[paste0("author_", i)]] <- gsub("\\s*\\([^\\)]+\\)", "", Corpus.Short[[paste0("author_", i)]])
-}
-```
-
-Create a column for each last name and first name 
-
-```{r}
-for (i in 1:11) {
+for (i in 1:10) {
   Corpus.Short <- Corpus.Short %>%
     separate(col = paste0("author_", i), into = c(paste0("l_name_", i), paste0("f_name_", i)), sep = ",", remove = FALSE, extra = "drop")
 }
 ```
 
-Delete white spaces in columns f_name 
+Cleaning
 
 ```{r}
-for (i in 1:11) {
-  Corpus.Short[[paste0("f_name_", i)]] <- str_trim(Corpus.Short[[paste0("f_name_", i)]])
+for (i in 1:10) {
+  # Supprimer les textes entre parenthèses : OK
+  Corpus.Short[[paste0("f_name_", i)]] <- gsub("\\s*\\([^\\)]+\\)", "", Corpus.Short[[paste0("f_name_", i)]])
+  
+  # Supprimer les lettres suivies d’un point : OK
+  Corpus.Short[[paste0("f_name_", i)]] <- gsub("[A-Za-z]\\.", "", Corpus.Short[[paste0("f_name_", i)]])
+  
+  # Remplacer les ponctuations par des espaces : OK !
+  Corpus.Short[[paste0("f_name_", i)]] <- gsub("[[:punct:]]", " ", Corpus.Short[[paste0("f_name_", i)]])
+  
+  # Supprimer les espaces supplémentaires (double espaces potentiellement dûs au remplacement de la ponctuation par des espaces): OK
+  Corpus.Short[[paste0("f_name_", i)]] <- gsub("\\s+", " ", Corpus.Short[[paste0("f_name_", i)]])
+  
+  # Supprimer les espaces de début et de fin : OK
+  Corpus.Short[[paste0("f_name_", i)]] <- trimws(Corpus.Short[[paste0("f_name_", i)]])
 }
 ```
 
-Step 3 : Dataframe for probabilities for gender 
+Jean-Paul devient Jean Paul, les parethèses et les chiffres sont supprimées ainsi que les lettres suivies d'un point. 
+
+- Remove all accents : OK
 
 ```{r}
-get_gender_prob <- function(first_name) 
-  {
-  gender(first_name)
+remove_accents <- function(text) {
+  stri_trans_general(text, "Latin-ASCII")
 }
+
+for (i in 1:10) {
+  column_name <- paste0("f_name_", i)
+  Corpus.Short[[column_name]] <- remove_accents(Corpus.Short[[column_name]])
+}
+```
+
+Suggestion prénoms composés car le package va pas le reconnaître : garder que le premier prénom
+
+Step 3 : Dataframe for probabilities of gender according to first name 
+
+La méthode "ssa" utilise les noms de bébés de la US Census List des États-Unis. Elle se restreint donc seulement aux EU. 
+La méthode "ipums" recherche les noms à partir des données du recensement américain Integrated Public Use Microdata Series.
+La méthode "napp" utilise les microdonnées de recensement du Canada, de la Grande-Bretagne, du Danemark, de l'Islande, de la Norvège et de la Suède de 1801 à 1910 créées par le North Atlantic Population Project. 
+La méthode "kantrowitz" utilise le corpus Kantrowitz de noms masculins et féminins. 
+La méthode "genderize" utilise l'API Genderize.io <https://genderize.io/>, qui est basée sur les "profils d'utilisateurs des principaux réseaux sociaux". 
+
+En revanche, je ne sais pas comment le package traite les prénoms qu'il ne connait pas. 
+De plus, il n'y a aucune différence entre l'utilisation de la méthode ssa et des EU uniquement et l'utilisation de toutes les méthodes disponibles et tous les pays disponibles, ce que je trouve bizarre. 
+
+```{r}
+#Avec une seule méthode (ssa par défaut)
+
+#Définition de la fonction
+get_gender_prob <- function(names)
+  
+{
+  gender(names)
+}
+
+#Application de la fonction get_gender_prob aux colonnes de Corpus.Short qui commencent par f_name
 
 gender_proba <- lapply(Corpus.Short[, grepl("^f_name_", colnames(Corpus.Short))], get_gender_prob)
 
+#Combiner les résultats du code précédent en un seul dataframe, en les ajoutant lignes par lignes
+
 gender_proba_df <- do.call(rbind, gender_proba)
+
+#Garder les valeurs uniques
+
+gender_proba_df_2 <- gender_proba_df %>%
+  group_by(name) %>%
+  slice(1)
 ```
 
+```{r}
+#Avec toutes les méthodes et tous les pays disponibles. Le code est peut être faux car même résultats et nombre d'observations que lorsque j'utilise seulement la méthode ssa et les EU uniquement
+
+get_gender_prob_2 <- function(names)
+{
+  gender(names, method = c("ssa", "ipums", "napp", "kantrowitz", "genderize", "demo"), countries = c("United States", "Canada", "United Kingdom", "Denmark", "Iceland","Norway", "Sweden"))
+}
+
+gender_proba_2 <- lapply(Corpus.Short[, grepl("^f_name_", colnames(Corpus.Short))], get_gender_prob)
+
+gender_proba_df_3 <- do.call(rbind, gender_proba_2)
+
+gender_proba_df_4 <- gender_proba_df_3 %>%
+  group_by(name) %>%
+  slice(1)
+```
+
+Même nombre d'observations avec les deux méthodes ??? J'ai l'impression que je suis censée en avoir beaucoup + avec la deuxième méthode. 
+
+Step 4 : Creation of an algorithm to assign first names to gender 
+
+```{r}
+# Garder uniquement les colonnes qui nous intéressent dans le dataframe gender_proba_df_2
+gender_proba_df_2 <- gender_proba_df_2 %>% select(name, proportion_male)
+
+# Fonction pour déterminer le genre en fonction de proportion_male
+determine_gender <- function (proportion_male) {
+  if (is.na(proportion_male)) {
+    return(NA)  # Si la proportion est NA, retourner NA
+  } else if (proportion_male >= 0.90) {
+    return(1)  # Si la probabilité est >= 90%, on considère que c'est un homme
+  } else {
+    return(0)  # Sinon, on considère que c'est une femme
+  }
+}
+
+# Détermination du genre (nouvelle colonne gender_i) pour chaque colonne f_name_i
+for (i in 1:10) {
+  f_name_col <- paste0("f_name_", i)
+  gender_col <- paste0("gender_", i)
+  
+#Création de deux nouvelles colonnes proportion_male (probabilité que le nom soit celui d'un homme) et gender (variable binaire si le prénom est assigné à celui d'un homme et 0 sinon) dans Corpus.Short 
+  
+Corpus.Short <- Corpus.Short %>%
+    left_join(gender_proba_df_2, by = setNames("name", f_name_col)) %>%
+    mutate(!!gender_col := sapply(proportion_male, determine_gender)) %>%
+    select(-proportion_male)
+}
+```
+
+Aggrégation 
+
+```{r}
+# Utiliser rowSums pour calculer la somme des genres masculins
+gender_cols <- grep("^gender_", colnames(Corpus.Short), value = TRUE)
+Corpus.Short$sum_gender_male <- rowSums(Corpus.Short[, gender_cols], na.rm = TRUE)
+
+# Calculer la proportion de genres masculins
+Corpus.Short <- Corpus.Short %>%
+  mutate(proportion_gender_male = sum_gender_male / nb_authors)
+```
+
+Test : compter le nombre de données non manquantes dans toutes les colonnes gender (nombre d'auteurs qui ont été assignés) et comparaison avec le nombre total d'auteur
+
+```{r}
+# Identifier les colonnes gender_
+gender_cols <- grep("^gender_", colnames(Corpus.Short), value = TRUE)
+
+# Compter le nombre de valeurs non-NA dans chaque colonne gender_
+non_na_counts_gender <- sapply(Corpus.Short[, gender_cols], function(x) sum(!is.na(x)))
+
+print(non_na_counts_gender)
+
+# Calculer la somme totale de toutes les valeurs non-NA
+total_non_na_gender <- sum(non_na_counts_gender)
+
+# Afficher la somme totale : 935 487 auteurs ont un genre ce qui est pas mal et cohérent avec le nombre d'observations dans gender_proba_df_2 mais alors pourquoi on voit autant de données manquantes dans les colonnes
+
+print(total_non_na_gender)
+
+#Nombre total d'auteurs
+
+nb_authors_col <- grep("^nb_authors", colnames(Corpus.Short), value = TRUE)
+
+counts_author <- sapply(Corpus.Short[, nb_authors_col], function(x) sum((x)))
+
+total_author <- sum(counts_author)
+print(total_author)
+```
+
+Je crois qu'il y a 935 487 sur 1 510 060 auteurs ont total qui ont été assignés soit 61,9% des observations totales. Pas mal. Mais je ne suis pas sûre de tout le code...
+
+Analyse des valeurs manquantes 
+
+```{r}
+library(dplyr)
+
+# Créer une liste pour stocker les résultats
+missing_names <- list()
+
+# Parcourir chaque colonne de prénom et de genre
+for (i in 1:11) {
+  # Obtenir les prénoms et les genres
+  first_names <- Corpus.Short[[paste0("f_name_", i)]]
+  genders <- Corpus.Short[[paste0("gender_", i)]]
+  
+  # Filtrer les NA dans les genres
+  missing <- first_names[is.na(genders)]
+  
+  # Ajouter les prénoms manquants à la liste
+  missing_names <- c(missing_names, missing)
+}
+
+# Convertir la liste en data frame et compter les occurrences
+missing_names_df <- data.frame(first_name = unlist(missing_names))
+missing_names_count <- missing_names_df %>%
+  count(first_name, sort = TRUE)
+
+# Afficher les prénoms manquants les plus fréquents
+print(head(missing_names_count, 20))
+```
+
+Je crois que parmi les valeurs manquantes il y a pas mal de prénoms chinois (Qiang, Fei, Fang, Xi, Ning Kun, Rong...) / prénoms européens (Iryna - Ukrainien, Wim - Hollande/Allemagne)
 
 ```{r}
 # table(Corpus$CC)
 table(Corpus.Short$CC)
+```
+
+Step 5 : Descriptive Statistics 
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+ggplot(Corpus.Short, aes(x=proportion_gender_male)) +
+geom_bar()
+```
+```{r}
+ggplot(Corpus.Short, aes(x=proportion_gender_male, y=Top25)) +
+   geom_jitter(alpha=0.5, width=0.01, height=0.01)
 ```
 
 ## Citation data
