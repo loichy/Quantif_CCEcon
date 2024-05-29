@@ -1,10 +1,15 @@
 ---
-title: "Quantifying interactions between economics of climate change, the rest of economics and other disciplines"
-author: ""
+title: Quantifying interactions between economics of climate change, the rest of economics
+  and other disciplines
+author: ''
 date: "`r format(Sys.time(), '%d/%m/%y')`"
-output: 
+output:
+  pdf_document: default
   html_document:
     css: styles.css
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r, include=FALSE}
@@ -35,7 +40,9 @@ lapply(dir, function(i) dir.create(i, recursive = T, showWarnings = F))
 
 ## Authorship data: gender and affiliation
 
-Affiliation data `C1`and `RP` variables. We'd like to identify each countries in which authors of the articles are affiliated. Thus, we'd like to create a variable "country" which list each country referenced in the `C1`and `RP`variables. 
+Affiliation data `C1`and `RP` variables.
+We'd like to identify each countries in which authors of the articles are affiliated.
+Thus, we'd like to create a variable "country" which list each country referenced in the `C1`and `RP`variables.
 
 You can focus on climate related articles
 
@@ -44,9 +51,10 @@ You can focus on climate related articles
 load(here(dir$prep.data,"Corpus_Short.Rdata"))
 ```
 
-## Gender 
+## Step 1: Creation of new columns for each author and for each article
 
-Creation of new columns for each author and for each article : separation of the column "AF" into several columns. New columns are entitled "author_" and goes from 1 to 10 (1 if there is only 1 author and 10 if there are 10 authors)
+Separation of the column "AF" into several columns.
+New columns are entitled "author\_" and goes from 1 to 10 (1 if there is only 1 author and 10 if there are 10 authors)
 
 ```{r}
 # Creation of a new column "nb_authors" to count the number of authors per article
@@ -64,7 +72,7 @@ Corpus.Short <- Corpus.Short %>%
   separate(col = AF, into = paste0("author_", 1:10), sep = ";", remove = FALSE, extra = "drop")
 ```
 
-Step 2 : Checks, creation of columns for last and first names and cleaning 
+## Step 2 : Checks, creation of columns for last and first names and cleaning
 
 Check to see if there are no missing values in one of the new column created : OK
 
@@ -78,7 +86,8 @@ for (i in 1:10) {
 print(results)
 ```
 
-Create a column for each last name (l_name) and first name (f_name). f_name will be used during all the analysis of the gender. 
+Create a column for each last name (l_name) and first name (f_name).
+f_name will be used during all the analysis of the gender.
 
 ```{r}
 for (i in 1:10) {
@@ -108,9 +117,9 @@ for (i in 1:10) {
 }
 ```
 
-Jean-Paul devient Jean Paul, les parethèses et les chiffres sont supprimées ainsi que les lettres suivies d'un point. 
+Jean-Paul devient Jean Paul, les parethèses et les chiffres sont supprimées ainsi que les lettres suivies d'un point.
 
-- Remove all accents : OK
+-   Remove all accents : OK
 
 ```{r}
 remove_accents <- function(text) {
@@ -123,18 +132,19 @@ for (i in 1:10) {
 }
 ```
 
-Suggestion prénoms composés car le package va pas le reconnaître : garder que le premier prénom
+Suggestion prénoms composés car le package va pas le reconnaître : garder que le premier prénom (essayer)
 
-Step 3 : Dataframe for probabilities of gender according to first name 
+## Step 3 : Dataframe for probabilities of gender according to first name
 
-La méthode "ssa" utilise les noms de bébés de la US Census List des États-Unis. Elle se restreint donc seulement aux EU. 
+La méthode "ssa" utilise les noms de bébés de la US Census List des États-Unis.
+Elle se restreint donc seulement aux EU.
 La méthode "ipums" recherche les noms à partir des données du recensement américain Integrated Public Use Microdata Series.
-La méthode "napp" utilise les microdonnées de recensement du Canada, de la Grande-Bretagne, du Danemark, de l'Islande, de la Norvège et de la Suède de 1801 à 1910 créées par le North Atlantic Population Project. 
-La méthode "kantrowitz" utilise le corpus Kantrowitz de noms masculins et féminins. 
-La méthode "genderize" utilise l'API Genderize.io <https://genderize.io/>, qui est basée sur les "profils d'utilisateurs des principaux réseaux sociaux". 
+La méthode "napp" utilise les microdonnées de recensement du Canada, de la Grande-Bretagne, du Danemark, de l'Islande, de la Norvège et de la Suède de 1801 à 1910 créées par le North Atlantic Population Project.
+La méthode "kantrowitz" utilise le corpus Kantrowitz de noms masculins et féminins.
+La méthode "genderize" utilise l'API Genderize.io <https://genderize.io/>, qui est basée sur les "profils d'utilisateurs des principaux réseaux sociaux".
 
-En revanche, je ne sais pas comment le package traite les prénoms qu'il ne connait pas. 
-De plus, il n'y a aucune différence entre l'utilisation de la méthode ssa et des EU uniquement et l'utilisation de toutes les méthodes disponibles et tous les pays disponibles, ce que je trouve bizarre. 
+En revanche, je ne sais pas comment le package traite les prénoms qu'il ne connait pas.
+De plus, il n'y a aucune différence entre l'utilisation de la méthode ssa et des EU uniquement et l'utilisation de toutes les méthodes disponibles et tous les pays disponibles, ce que je trouve bizarre.
 
 ```{r}
 #Avec une seule méthode (ssa par défaut)
@@ -178,27 +188,30 @@ gender_proba_df_4 <- gender_proba_df_3 %>%
   slice(1)
 ```
 
-Même nombre d'observations avec les deux méthodes ??? J'ai l'impression que je suis censée en avoir beaucoup + avec la deuxième méthode. 
+Même nombre d'observations avec les deux méthodes ???
+J'ai l'impression que je suis censée en avoir beaucoup + avec la deuxième méthode.
 
-Step 4 : Creation of an algorithm to assign first names to gender 
+## Step 4 : Creation of an algorithm to assign first names to gender
 
 ```{r}
 # Garder uniquement les colonnes qui nous intéressent dans le dataframe gender_proba_df_2
 gender_proba_df_2 <- gender_proba_df_2 %>% select(name, proportion_male)
 
-# Fonction pour déterminer le genre en fonction de proportion_male
-determine_gender <- function (proportion_male) {
+determine_gender <- function(proportion_male) {
   if (is.na(proportion_male)) {
     return(NA)  # Si la proportion est NA, retourner NA
-  } else if (proportion_male >= 0.90) {
-    return(1)  # Si la probabilité est >= 90%, on considère que c'est un homme
+  } else if (proportion_male > 0.90) {
+    return(1)  # Si la proportion de probabilité est > 90%, on considère que c'est un homme
+  } else if (proportion_male <= 0.10) {
+    return(0)  # Si la proportion de probabilité est <= 10%, on considère que c'est une femme
   } else {
-    return(0)  # Sinon, on considère que c'est une femme
+    return("Unknown gender")  # Si la proportion est entre 0.1 et 0.9, le genre est inconnu
   }
 }
 
 # Détermination du genre (nouvelle colonne gender_i) pour chaque colonne f_name_i
-for (i in 1:10) {
+for (i in 1:10) 
+  {
   f_name_col <- paste0("f_name_", i)
   gender_col <- paste0("gender_", i)
   
@@ -211,35 +224,41 @@ Corpus.Short <- Corpus.Short %>%
 }
 ```
 
-Aggrégation 
-
-```{r}
-# Utiliser rowSums pour calculer la somme des genres masculins
-gender_cols <- grep("^gender_", colnames(Corpus.Short), value = TRUE)
-Corpus.Short$sum_gender_male <- rowSums(Corpus.Short[, gender_cols], na.rm = TRUE)
-
-# Calculer la proportion de genres masculins
-Corpus.Short <- Corpus.Short %>%
-  mutate(proportion_gender_male = sum_gender_male / nb_authors)
-```
-
-Test : compter le nombre de données non manquantes dans toutes les colonnes gender (nombre d'auteurs qui ont été assignés) et comparaison avec le nombre total d'auteur
+Aggrégation
 
 ```{r}
 # Identifier les colonnes gender_
 gender_cols <- grep("^gender_", colnames(Corpus.Short), value = TRUE)
 
-# Compter le nombre de valeurs non-NA dans chaque colonne gender_
-non_na_counts_gender <- sapply(Corpus.Short[, gender_cols], function(x) sum(!is.na(x)))
+# Convertir temporairement les "Unknown Gender" en NA
+Corpus.Short[gender_cols] <- lapply(Corpus.Short[gender_cols], function(x) ifelse(x == "Unknown Gender", NA, x))
 
-print(non_na_counts_gender)
+# Convertir les colonnes gender_ en numérique
+Corpus.Short[gender_cols] <- lapply(Corpus.Short[gender_cols], as.numeric)
 
-# Calculer la somme totale de toutes les valeurs non-NA
-total_non_na_gender <- sum(non_na_counts_gender)
+# Calculer la somme des genres masculins pour chaque ligne
+Corpus.Short$sum_gender_male <- rowSums(Corpus.Short[gender_cols] == 1, na.rm = TRUE)
 
-# Afficher la somme totale : 935 487 auteurs ont un genre ce qui est pas mal et cohérent avec le nombre d'observations dans gender_proba_df_2 mais alors pourquoi on voit autant de données manquantes dans les colonnes
+# Calculer la proportion de genres masculins
+Corpus.Short$proportion_gender_male <- Corpus.Short$sum_gender_male / Corpus.Short$nb_authors
+```
 
-print(total_non_na_gender)
+Test : compter le nombre de données non manquantes dans toutes les colonnes gender (nombre d'auteurs qui ont été assignés donc qui prennent la valeur 0 ou 1) et comparaison avec le nombre total d'auteur
+
+```{r}
+# Identifier les colonnes gender_
+gender_cols <- grep("^gender_", colnames(Corpus.Short), value = TRUE)
+
+# Compter le nombre de valeurs 0 ou 1 dans chaque colonne gender_ (donc le nombre d'auteurs assignés correctement)
+assigned_counts_gender <- sapply(Corpus.Short[, gender_cols], function(x) sum(x %in% c(0, 1), na.rm = TRUE))
+
+print(assigned_counts_gender)
+
+# Calculer la somme totale de toutes les valeurs assignées (0 ou 1)
+total_assigned_gender <- sum(assigned_counts_gender)
+
+# Afficher la somme totale
+print(total_assigned_gender)
 
 #Nombre total d'auteurs
 
@@ -251,64 +270,248 @@ total_author <- sum(counts_author)
 print(total_author)
 ```
 
-Je crois qu'il y a 935 487 sur 1 510 060 auteurs ont total qui ont été assignés soit 61,9% des observations totales. Pas mal. Mais je ne suis pas sûre de tout le code...
+Code avant modifications : Je crois qu'il y a 935 487 sur 1 510 060 auteurs ont total qui ont été assignés soit 61,9% des observations totales.
+Pas mal.
+Mais je ne suis pas sûre de tout le code... Code 2 (algorithme modifié avec proprion_male \<0.1 et "Unkown Gender") : 862 027 auteurs assignés comme homme ou femme = 57% des observations totales.
 
-Analyse des valeurs manquantes 
+Analyse des valeurs manquantes
 
 ```{r}
-library(dplyr)
-
 # Créer une liste pour stocker les résultats
 missing_names <- list()
 
 # Parcourir chaque colonne de prénom et de genre
 for (i in 1:11) {
-  # Obtenir les prénoms et les genres
-  first_names <- Corpus.Short[[paste0("f_name_", i)]]
-  genders <- Corpus.Short[[paste0("gender_", i)]]
+# Obtenir les prénoms et les genres
+first_names <- Corpus.Short[[paste0("f_name_", i)]]
+genders <- Corpus.Short[[paste0("gender_", i)]]
   
-  # Filtrer les NA dans les genres
-  missing <- first_names[is.na(genders)]
+# Filtrer les NA et les "Unknown Gender" dans les genres
+missing <- first_names[is.na(genders) | genders == "Unknown Gender"]
   
-  # Ajouter les prénoms manquants à la liste
-  missing_names <- c(missing_names, missing)
+# Ajouter les prénoms manquants à la liste
+ missing_names <- c(missing_names, missing)
 }
 
 # Convertir la liste en data frame et compter les occurrences
 missing_names_df <- data.frame(first_name = unlist(missing_names))
 missing_names_count <- missing_names_df %>%
-  count(first_name, sort = TRUE)
+count(first_name, sort = TRUE)
 
 # Afficher les prénoms manquants les plus fréquents
 print(head(missing_names_count, 20))
 ```
 
-Je crois que parmi les valeurs manquantes il y a pas mal de prénoms chinois (Qiang, Fei, Fang, Xi, Ning Kun, Rong...) / prénoms européens (Iryna - Ukrainien, Wim - Hollande/Allemagne)
+Je crois que parmi les valeurs manquantes il y a pas mal de prénoms chinois (Qiang, Kai, Yong Hong, Lin, Ying, Xin, Yi,Yu, Li, Yang...) / prénoms européens
+
+Creation of a column sum_gender_female to count the number of female authors per article
 
 ```{r}
-# table(Corpus$CC)
-table(Corpus.Short$CC)
+Corpus.Short$sum_gender_female <- Corpus.Short$nb_authors - Corpus.Short$sum_gender_male
 ```
 
-Step 5 : Descriptive Statistics 
+Creation of categorical variables : MM if there are only male authors (sum_gender_female = 0), FF if there are only female authors (sul_gender_male = 0) and MF if there are male and female authors (sum_gender_male and sum_gender_female different from 0)
+
+```{r}
+Corpus.Short <- Corpus.Short %>%
+  mutate(
+    MM = ifelse(sum_gender_female == 0, 1, 0),  
+    # MM = 1 si sum_gender_female est 0 (pas de femmes)
+    FF = ifelse(sum_gender_male == 0, 1, 0),    
+    # FF = 1 si sum_gender_male est 0 (pas d'hommes)
+    MF = ifelse(sum_gender_male != 0 & sum_gender_female != 0, 1, 0),  
+    # MF = 1 si les deux genres sont présents
+    category = case_when(
+      MM == 1 ~ "MM",
+      FF == 1 ~ "FF",
+      MF == 1 ~ "MF",
+      TRUE ~ NA_character_
+    )
+  )
+```
+
+```{r}
+Corpus.Short <- Corpus.Short %>%
+  mutate(proportion_female = sum_gender_female / nb_authors)
+```
+
+# Step 5 : Descriptive Statistics
+
+## 1. Study of the sum_gender_female variable at an aggregate level
 
 ```{r}
 library(ggplot2)
 ```
 
+### 1.1. Proportion of male and female authors
+
 ```{r}
-ggplot(Corpus.Short, aes(x=proportion_gender_male)) +
-geom_bar()
+#Distribution of sum_gender_male : bar chart
+
+ggplot(data = Corpus.Short, mapping = aes(x = sum_gender_male)) +
+  geom_bar() +
+  labs(
+    title = "Distribution of male authors per article",
+    subtitle = "Bar Chart",
+    x = "Number of male authors",
+    y = "Number of articles"
+  ) +
+  scale_x_continuous(breaks = seq(0, 10, by = 1), limits = c(0, 10))
+```
+
+```{r}
+#Distribution of sum_gender_female : bar chart
+
+ggplot(data = Corpus.Short, mapping = aes(x = sum_gender_female)) +
+  geom_bar() +
+  labs(title = "Distribution of female authors per article", subtitle = "Bar Chart",
+       x = "Number of female authors",
+       y = "Number of articles") +
+  scale_x_continuous(breaks = seq(0, 10, by = 1), limits = c(0, 10))
+```
+
+```{r}
+#Distribution of sum_gender_male : density graph
+ggplot(Corpus.Short, aes(x = sum_gender_male)) +
+  geom_density(linewidth = 0.75) +
+  labs(
+    title = "Distribution of male authors per article",
+    subtitle = "Density Graph",
+    x = "Number of male authors",
+    y = "Density"
+  ) +
+  scale_x_continuous(breaks = seq(0, 10, by = 1), limits = c(0, 10))
+```
+
+```{r}
+ggplot(Corpus.Short, aes(x = sum_gender_female)) +
+  geom_density(linewidth = 0.75) +
+  labs(
+    title = "Distribution of female authors per article",
+    subtitle = "Density Graph",
+    x = "Number of female authors",
+    y = "Density"
+  ) +
+  scale_x_continuous(breaks = seq(0, 10, by = 1), limits = c(0, 10))
+```
+
+### 1.2. Proportion of female and male authors according to categorical variables
+
+```{r}
+# Dataframe summarizing  proportions for each category 
+proportions <- Corpus.Short %>%
+  summarize(
+    total_female_authors = sum(sum_gender_female),
+    total_male_authors = sum(sum_gender_male),
+    proportion_MM = sum(MM) / n(),
+    proportion_FF = sum(FF) / n(),
+    proportion_MF = sum(MF) / n()
+  )
+print(proportions)
 ```
 ```{r}
-ggplot(Corpus.Short, aes(x=proportion_gender_male, y=Top25)) +
-   geom_jitter(alpha=0.5, width=0.01, height=0.01)
+library(ggridges)
+#Numerical and categorical variable
+ggplot(Corpus.Short, aes(x=sum_gender_male, y=category, fill=category, color=category)) + geom_density_ridges(alpha=0.5)
+```
+
+```{r}
+ggplot(Corpus.Short, aes(x=category, y=proportion_gender_male)) + geom_boxplot()
+```
+```{r}
+ggplot(Corpus.Short, aes(x=category, y=proportion_female)) + geom_boxplot()
+```
+
+### 1.3.Temporal evolution
+
+```{r}
+# Distribution of female authors accross time
+
+ggplot(Corpus.Short, aes(x = PY, y = sum_gender_female)) +
+  geom_point() +
+  labs(title = "Proportion of female authors across time",
+       x = "Publication date",
+       y = "Proportion") +
+  scale_y_continuous(breaks = seq(0, 20, by = 1), limits = c(0, 20))
+
+```
+
+```{r}
+ggplot(Corpus.Short, aes(x = PY, y = proportion_gender_male)) +
+  geom_point() +
+  labs(title = "Proportion of male authors across time",
+       x = "Publication date",
+       y = "Proportion") + scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0, 1))
+```
+
+##2. Focus on climate change
+
+```{r}
+ggplot(Corpus.Short, aes(x = sum_gender_female, fill = factor(CC))) +
+  geom_histogram(alpha = 1/5, position = "identity") +
+  labs(title = "Distribution des auteurs femmes pour les articles sur le changement climatique",
+       x = "Nombre de femmes",
+       y = "Nombre d'articles",
+       fill = "Changement Climatique (CC)") +
+  scale_x_continuous(breaks = seq(0, 10, by = 1), limits = c(0, 10)) +
+  scale_fill_manual(values = c("0" = "blue", "1" = "green"))
+```
+```{r}
+ggplot(Corpus.Short, aes(x = proportion_female, fill = factor(CC))) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Distribution des proportions d'auteurs femmes",
+       x = "Proportion de femmes",
+       y = "Densité",
+       fill = "Changement Climatique (CC)") +
+  scale_fill_manual(values = c("0" = "blue", "1" = "green"))
+```
+La proportion d'articles qui ne contiennent aucune femme auteur / qui ne contiennent aucun homme auteur est plus importante pour les articles qui ne portent pas sur le CC. La proportion d'articles dont la moitié des auteurs sont des femmes est plus importante pour les articles ne portant pas sur le CC. 
+La proportion d'articles pour lesquels 75% des auteurs sont des femmes est plus importante pour les articles qui portent sur le CC. 
+
+##3. Focus on Top5 and Top30 and on climte change 
+
+```{r}
+# Comparer les ratios d'auteurs femmes dans les Top5 et Top30 journaux
+ggplot(Corpus.Short, aes(x = factor(TopFive), y = sum_gender_female / nb_authors)) +
+  geom_boxplot() +
+  labs(title = "Proportion d'auteurs femmes dans les 5 meilleurs journaux",
+       x = "Top5 Journaux",
+       y = "Proportion d'auteurs femmes") +
+  facet_wrap(~ CC, scales = "free")
+```
+Graphique 1 : 5 meilleurs journaux - à gauche les articles ne portant pas sur le CC et à droite les articles portant sur le CC, le boxplot de  gauche si c'est un article dans le top 5 et à droite sinon. 
+- pour les articles ne portnt ps sur le CC : la médiane de la proportion de femmes est supérieure pour les articles pas dans le top5 comparativement aux articles dans le top5
+- pour les articles portant sur le CC : la médiane de la proportion de femmes est supérieure pour les articles pas dans le top5 comparativement aux articles dans le top5
+
+```{r}
+ggplot(Corpus.Short, aes(x = factor(Top30), y = sum_gender_female / nb_authors)) +
+  geom_boxplot() +
+  labs(title = "Proportion d'auteurs femmes dans les 30 meilleurs journaux",
+       x = "Top30 Journaux",
+       y = "Proportion d'auteurs femmes") +
+  facet_wrap(~ CC, scales = "free")
+```
+
+Graphique 2 : 30 meilleurs journaux - à gauche les articles ne portant pas sur le CC et à droite les articles portant sur le CC, le boxplot de  gauche si c'est un article dans le top 30 et à droite sinon. 
+- pour les articles ne portnt ps sur le CC : la médiane de la proportion de femmes est supérieure pour les articles pas dans le top30 comparativement aux articles dans le top30
+- pour les articles portant sur le CC : la médiane de la proportion de femmes est supérieure pour les articles pas dans le top30 comparativement aux articles dans le top30
+
+Comparaison articles ne portant pas sur le CC : la médiane de la proportion de femmes pour les journaux dans le top30 est supérieure à celle pour les journaux dans le top5
+
+Globalement : la proportion de femmes est moins importante dans les meilleurs journaux uue ce soit pour les articles portant sur le CC ou pour les articles qui ne portent pas sur le CC
+```{r}
+# table(Corpus$CC)
+table(Corpus.Short$CC)
 ```
 
 ## Citation data
 
 ### Clean citation data
-Prepare citation data. We want to create a database, where for each article (one raw in `Corpus`), we have a data frame with its cited articles. (one raw by references). We want to separate information on the authors of the cited articles, the title of the article, the year of publication, and the journal. 
+
+Prepare citation data.
+We want to create a database, where for each article (one raw in `Corpus`), we have a data frame with its cited articles.
+(one raw by references).
+We want to separate information on the authors of the cited articles, the title of the article, the year of publication, and the journal.
 
 First work with one of the datasource: let's say Wos.
 
