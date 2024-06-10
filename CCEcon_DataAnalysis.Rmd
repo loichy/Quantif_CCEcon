@@ -404,79 +404,97 @@ head(names_proba_df)
 # Récupérer les noms des femmes économistes et des prénoms chinois communs
 load(here(dir$prep.data, "FemaleEconomists_Names.Rdata"))
 load(here(dir$prep.data, "Common_Chinese_Names.Rdata"))
+load(here(dir$prep.data, "MaleEconomists_Names.Rdata"))
 
 common_chinese_names <- common_chinese_names[common_chinese_names!="Juan"]
 
 Corpus.CleanedNames.2 <- Corpus.CleanedNames
 # Algorithm that create a gender variable. But it also adds for all authors their probability of male firstname, and their probability of female first name
-for(i in 1:15){
+for(i in 1:15) {
   print(i)
-  Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>% # First create variable gender (takes value: NA, unknown, male and female)
-    mutate(!!paste0("gender_", i) := ifelse(test = is.na(.[[paste0("f_name_", i)]]), # 1. if first name is missing
-                                            yes = NA, 
-                                            no = ifelse(
-                                              test = .[[paste0("f_name_", i)]] %in% common_chinese_names, # 2. if first name is in the list of common chinese first names
-                                              yes = "unknown", 
-                                              no = ifelse(
-                                                test = .[[paste0("fullname_", i)]] %in% top10_female_economists, #3. If full name is in the list of top 10% of female economists
-                                                yes = "female", 
-                                                no = ifelse(
-                                                  test = !(.[[paste0("f_name_", i)]] %in% names_proba_df$name), #4. If first name is absent from the list of first name with measured gender probability
-                                                  yes = NA,
-                                                  no = case_when(
-                                                    names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]],names_proba_df$name)] > 0.9 ~ "male",
-                                                    names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]],names_proba_df$name)] < 0.1 ~ "female", 
-                                                    names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]],names_proba_df$name)] >= 0.1 & names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]],names_proba_df$name)] <= 0.9 ~"unknown"
-                                                    )
-                                                  )
-                                              )
-                                            )
-                                            )) %>%
-    mutate(!!paste0("proportion_male_", i) := ifelse(test = is.na(.[[paste0("f_name_", i)]]), # Create the variable that gives the probability that author is male, only if gender is assigned
-                                                     yes = NA,
-                                                     no = ifelse(
-                                                       test = .[[paste0("f_name_", i)]] %in% common_chinese_names,
-                                                       yes = NA,
-                                                       no = ifelse(
-                                                         test = .[[paste0("fullname_", i)]] %in% top10_female_economists,
-                                                         yes = 0,
-                                                         no = ifelse(
-                                                           test = !(.[[paste0("f_name_", i)]] %in% names_proba_df$name),
-                                                           yes = NA,
-                                                           no = ifelse(
-                                                             test = .[[paste0("gender_", i)]] %in% c("male", "female"),
-                                                             yes = names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]],names_proba_df$name)],
-                                                             no = NA
-                                                             )
-                                                           )
-                                                         )
-                                                       )
-                                                     ),
-           !!paste0("proportion_female_", i) := ifelse(test = is.na(.[[paste0("f_name_", i)]]), # Create the variable that gives the probability that author is female, only if gender is assigned
-                                                     yes = NA,
-                                                     no = ifelse(
-                                                       test = .[[paste0("f_name_", i)]] %in% common_chinese_names,
-                                                       yes = NA,
-                                                       no = ifelse(
-                                                         test = .[[paste0("fullname_", i)]] %in% top10_female_economists,
-                                                         yes = 1,
-                                                         no = ifelse(
-                                                           test = !(.[[paste0("f_name_", i)]] %in% names_proba_df$name),
-                                                           yes = NA,
-                                                           no = ifelse(
-                                                             test = .[[paste0("gender_", i)]] %in% c("male", "female"),
-                                                             yes = names_proba_df$proportion_female[match(.[[paste0("f_name_", i)]],names_proba_df$name)],
-                                                             no = NA
-                                                             )
-                                                           )
-                                                         )
-                                                       )
-                                                     ),
-           nb_authors_gendered = rowSums(!is.na(select(., starts_with("proportion_male")))), # Count the number of authors with identified gender
-           ratio_identified_gender = nb_authors_gendered / nb_authors # Among authors, the proportion of authors with identified gender = 
-           
-           
-           )
+  Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>%
+    # First create variable gender (takes value: NA, unknown, male and female)
+    mutate(
+      !!paste0("gender_", i) := ifelse(
+        test = is.na(.[[paste0("f_name_", i)]]), # 1. if first name is missing in Corpus.CleanedNames.2 gender = NA
+        yes = NA,
+        no = ifelse( 
+          test = .[[paste0("f_name_", i)]] %in% common_chinese_names, # 2. if first name is in the list of common chinese first names gender = unknown
+          yes = "unknown",
+          no = ifelse(
+            test = .[[paste0("fullname_", i)]] %in% top10_female_economists, # 3. If full name is in the list of top 10% of female economists gender = female
+            yes = "female",
+            no = ifelse(
+              test = .[[paste0("fullname_", i)]] %in% top10_male_economists, # 4. If full name is in the list of top 10% of male economists gender = male
+              yes = "male",
+              no = ifelse(
+                test = !(.[[paste0("f_name_", i)]] %in% names_proba_df$name), # 5. If first name is absent from the list of first names with measured gender probability (absent from names_proba_df) gender = NA
+                yes = NA,
+                no = case_when(
+                  names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]], names_proba_df$name)] > 0.9 ~ "male",
+                  names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]], names_proba_df$name)] < 0.1 ~ "female",
+                  names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]], names_proba_df$name)] >= 0.1 & names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]], names_proba_df$name)] <= 0.9 ~ "unknown"
+                )
+              )
+            )
+          )
+        )
+      )
+    ) %>%
+    mutate(
+      !!paste0("proportion_male_", i) := ifelse(
+        test = is.na(.[[paste0("f_name_", i)]]), # Create the variable that gives the probability that author is male, only if gender is assigned
+        yes = NA,
+        no = ifelse(
+          test = .[[paste0("f_name_", i)]] %in% common_chinese_names,
+          yes = NA,
+          no = ifelse(
+            test = .[[paste0("fullname_", i)]] %in% top10_female_economists,
+            yes = 0,
+            no = ifelse(
+              test = .[[paste0("fullname_", i)]] %in% top10_male_economists,
+              yes = 1,
+              no = ifelse(
+                test = !(.[[paste0("f_name_", i)]] %in% names_proba_df$name),
+                yes = NA,
+                no = ifelse(
+                  test = .[[paste0("gender_", i)]] %in% c("male", "female"),
+                  yes = names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]], names_proba_df$name)],
+                  no = NA
+                )
+              )
+            )
+          )
+        )
+      ),
+      !!paste0("proportion_female_", i) := ifelse(
+        test = is.na(.[[paste0("f_name_", i)]]), # Create the variable that gives the probability that author is female, only if gender is assigned
+        yes = NA,
+        no = ifelse(
+          test = .[[paste0("f_name_", i)]] %in% common_chinese_names,
+          yes = NA,
+          no = ifelse(
+            test = .[[paste0("fullname_", i)]] %in% top10_female_economists,
+            yes = 1,
+            no = ifelse(
+              test = .[[paste0("fullname_", i)]] %in% top10_male_economists,
+              yes = 0,
+              no = ifelse(
+                test = !(.[[paste0("f_name_", i)]] %in% names_proba_df$name),
+                yes = NA,
+                no = ifelse(
+                  test = .[[paste0("gender_", i)]] %in% c("male", "female"),
+                  yes = names_proba_df$proportion_female[match(.[[paste0("f_name_", i)]], names_proba_df$name)],
+                  no = NA
+                )
+              )
+            )
+          )
+        )
+      ),
+      nb_authors_gendered = rowSums(!is.na(select(., starts_with("proportion_male")))), # Count the number of authors with identified gender
+      ratio_identified_gender = nb_authors_gendered / nb_authors # Among authors, the proportion of authors with identified gender
+    )
 }
 
 # Check results
@@ -557,7 +575,7 @@ authors_df <- tibble(firstname = all_firstnames_incorpus, #base de données gén
 length(authors_df$fullname2)  
 ```
 
-122788 different authors for 60 000 articles.
+111 112 different authors for 60 000 articles.
 
 ```{r}
 
@@ -579,6 +597,8 @@ The more the number of authors is important, the higher the prob of assigning  g
 For instance, among authors that have written 1 article, about 76 000 have an assigned gender, and 29 000 have a missing info on gender (about 25% of missing gender).
 La ratio diminue jusqu'aux auteurs avec 6 articles (15% de genre non assignés), puis ensuite le fait de travailler sur un échantillon aléatoire du corpus semble brouill l'information.
 Mais il semble qu'il y ait des auteurs importants (avec plus de 10 articles), dont le genre n'est pas assigné (souvent des auteurs d'asie de l'est).
+
+Depuis l'aout de top_10_male_economists, les auteurs principaux (qui écrivent beaucoup d’articles) sont correctement assgnés. Rq : disparition de l'auteur qui avait écrit 54 articles.
 
 # Step 7 : Agregation at the level of the article
 
@@ -626,6 +646,8 @@ Gender_of_Articles <- Corpus.CleanedNames.2 %>%
             Gender_Larger0.25 = length(ratio_identified_gender[ratio_identified_gender >= 0.25])/Nb_articles, # Ratio d'article où au moins 25% des auteurs sont identifiés
             Mean_IdentifiedGender = mean(ratio_identified_gender), # Moyenne du ratio d'auteurs identifé
             Median_identifiedGender = median(ratio_identified_gender))# Médiane
+
+Gender_of_Articles
 ```
 
 Nous voyons que pour environ 15% des articles, il nous est impossible d'assigner le genre à l'un des auteurs.
@@ -642,7 +664,7 @@ NotGendered_authors <- authors_df %>%
   filter(is.na(gender)) %>% 
   arrange(firstname)
 
-NotGendered_authors #30 191 auteurs qui n'ont pas été assignés sur 111 116 auteurs différents (27% d'auteurs non assignés)
+NotGendered_authors #30 454 auteurs qui n'ont pas été assignés sur 111 116 auteurs différents (27% d'auteurs non assignés)
 ```
 
 ## Step 9 : Creation of categorical variables : 
@@ -671,13 +693,16 @@ table(Corpus.CleanedNames.2$category_gender)
 
 # Step 10 : Descriptive Statistics
 
-soit pivot_longer avec end_ith soit à partir de authors_df avec geom_bar
-```{r} 
-#authors_df %>%
-  #summarize(n = n(), 
-           #n_male = sum(gender=="male", na.rm = T),
-           #n_female = sum(gender=="female", na.rm = T)) %>%
+First step : determine the absolute number of articles with at least 1 author identified in terms of gender with NoGender 
+
+```{r}
+OneGender_by_Articles <- Corpus.CleanedNames.2 %>% 
+  summarize(Nb_articles = length(ratio_identified_gender), # Nb total d'article
+            NoGender = length(ratio_identified_gender[is.na(ratio_identified_gender) | ratio_identified_gender == 0]) / Nb_articles)
+
+OneGender_by_Articles
 ```
+Il y a au moins 85% des articles dont le genre a été assigné à au moins un auteur. 
 
 ## 1. Study of the sum_gender_female variable at an aggregate level
 
@@ -893,20 +918,34 @@ ggplot(annual_stats_by_category_long, aes(x = PY, y = Proportion, color = Gender
 ```
 L'analyse de l'évolution temporelle de la proportion de femmes dans les collaborations mixtes (MF) montre une tendance à la hausse, bien que légèrement variable d'une année à l'autre. En 2011, la proportion moyenne de femmes dans les collaborations MF était d'environ 24,77%, et cette proportion a augmenté progressivement au fil des années pour atteindre environ 31,17% en 2020. 
 
-```{r}
-stats_by_cat_articles <- Corpus.CleanedNames.2 %>%
-  group_by(PY,category_gender) %>% summarize(nb_articles=n())
 
-stats_by_cat_articles 
+### 1.4.2. Descriptive statistics : temporal evolution according to categorical variables,  by number of articles
+
+```{r}
+annual_stats_by_category_nbarticles <- Corpus.CleanedNames.2 %>%
+  group_by(PY, category_gender) %>%
+  summarize(
+    nb_articles=n()
+    )
+
+annual_stats_by_category_nbarticles
 ```
 
 ```{r}
-x = PY, color=category_gender
+ggplot(annual_stats_by_category_nbarticles, aes(x = PY, y = nb_articles, color = category_gender, group = category_gender)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(title = "Number of Articles by Year and Gender Category",
+       x = "Publication Year",
+       y = "Number of Articles",
+       color = "Gender Category") +
+  theme_minimal() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)))
 ```
 
 ##2.Focus on climate change
 
-# 2.1. Descriptive statistics
+# 2.1 Climate change overall : Descriptive statistics
 
 ```{r}
 # Calculer les statistiques descriptives pour chaque catégorie de la variable binaire "CC"
@@ -938,6 +977,56 @@ ggplot(stats_long, aes(x = factor(CC), y = Proportion, fill = Gender)) +
   theme_minimal()
 ```
 Interprétation : en moyenne, la proportion d'auteurs féminins dans les articles liés au changement climatique est légèrement plus faible que dans les articles non liés au changement climatique, avec des moyennes de 29,99% et 29,75% respectivement. En revanche, la proportion d'auteurs masculins est plus élevée dans les articles sur le changement climatique, avec une moyenne de 70,26%, comparativement à 70,06% pour les autres articles.
+
+##2.2. Climate change, category gender and number of articles
+
+```{r}
+stats_by_CC_category_gender <- Corpus.CleanedNames.2 %>%
+  group_by(CC, category_gender) %>%
+  summarize(nb_articles = n(), .groups = 'drop')
+
+stats_by_CC_category_gender
+```
+
+```{r}
+# Calculer la proportion des articles pour chaque combinaison de CC et category_gender
+stats_by_CC_category_gender <- stats_by_CC_category_gender %>%
+  group_by(CC) %>%
+  mutate(proportion_articles = nb_articles / sum(nb_articles))
+
+# Graphique
+ggplot(stats_by_CC_category_gender, aes(x = factor(CC), y = proportion_articles, fill = category_gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Articles by Collaboration Type and Climate Change Relevance",
+       x = "Climate Change Relevance (CC)",
+       y = "Proportion of Articles",
+       fill = "Collaboration Type") +
+  theme_minimal()
+```
+
+## 2.3 : Temporal evolution of the proportion of female authors by CC
+
+```{r}
+annual_stats_by_CC <- Corpus.CleanedNames.2 %>%
+  group_by(PY, CC) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+annual_stats_by_CC
+```
+```{r}
+ggplot(annual_stats_by_CC, aes(x = PY, y = Mean_Proportion_Female_Id, color = factor(CC))) +
+  geom_line(size = 1) +
+  labs(title = "Evolution of Mean Proportion of Female Authors Over Time",
+       x = "Publication Year",
+       y = "Mean Proportion of Female Authors",
+       color = "Climate Change Relevance (CC)") +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 1)) # Ajuster les limites de l'ordonnée pour aller de 0 à 1
+```
+Increase of female authors regarding climate change articles and decrase for non climate change related articles
 
 ##3.Focus on Top5 and Top30 and on climte change
 
@@ -972,7 +1061,7 @@ ggplot(Corpus.CleanedNames.2, aes(x = factor(Top30), y =proportion_gender_male_i
   facet_wrap(~ CC, scales = "free")
 ```
 Articles qui portent sur le CC : la proportion de femme dans le top 30 est beaucoup plus grande 
-Articles qui portent sur le CC et qui ne sont pas dans le top 30 : medianne de la proportion de femmes un peu plus élevée
+Articles qui portent sur le CC et qui ne sont pas dans le top 30 : mediane de la proportion de femmes un peu plus élevée
 
 ## 2. Geography 
 
