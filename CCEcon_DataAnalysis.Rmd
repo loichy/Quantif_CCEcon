@@ -986,6 +986,7 @@ stats_by_CC_category_gender <- Corpus.CleanedNames.2 %>%
   summarize(nb_articles = n(), .groups = 'drop')
 
 stats_by_CC_category_gender
+
 ```
 
 ```{r}
