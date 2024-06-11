@@ -51,4 +51,4 @@ po/*~
 rsconnect/
 
 # Not useful RMarkdown files
-Notes*
+/Notes*
