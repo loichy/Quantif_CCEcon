@@ -4,9 +4,10 @@ title: Quantifying interactions between economics of climate change, the rest of
 author: ''
 date: "`r format(Sys.time(), '%d/%m/%y')`"
 output:
-  pdf_document: default
-  html_document:
+  html_document: 
     css: styles.css
+    keep_md: true
+  pdf_document: default
 editor_options: 
   markdown: 
     wrap: sentence
