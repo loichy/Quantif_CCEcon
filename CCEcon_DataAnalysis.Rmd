@@ -581,14 +581,14 @@ length(authors_df$fullname2)
 ```{r}
 
 table(is.na(authors_df$gender))
-
+table(authors_df$gender)
 # Check authors that have written more than 10 articles:
 authors_with10articlesormore <- authors_df %>% 
   filter(n_articles>9)
 # Il s'agit en majorité de noms issus d'asie de l'est
 
 # By number of articles written for each author, how much missing gender?
-table(authors_df$n_articles, is.na(authors_df$gender)) #False : auteurs bien assignés
+table(authors_df$n_articles, authors_df$gender, useNA = "ifany") #False : auteurs bien assignés
 ```
 
 Overall we have about 25% of authors with unidentified gender (30 000/80 000).
@@ -697,6 +697,7 @@ table(Corpus.CleanedNames.2$category_gender)
 First step : determine the absolute number of articles with at least 1 author identified in terms of gender with NoGender 
 
 ```{r}
+load(here(dir$prep.data, "GenderedAuthors_Data.Rdata"))
 OneGender_by_Articles <- Corpus.CleanedNames.2 %>% 
   summarize(Nb_articles = length(ratio_identified_gender), # Nb total d'article
             NoGender = length(ratio_identified_gender[is.na(ratio_identified_gender) | ratio_identified_gender == 0]) / Nb_articles)

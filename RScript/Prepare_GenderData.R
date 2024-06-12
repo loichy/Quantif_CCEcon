@@ -3,13 +3,15 @@
 # author: manon.eluard@dauphine.eu ; loic.henry@dauphine.psl.eu
 #===============================================================================
 
+# 0. Prepare working environment ---------------------------------------------------------------
+
 # Clean memory 
 rm(list=ls())
 gc()
 
 # Load package
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere)
+pacman::p_load(tidyverse, data.table, here, lubridate, stringi, gender)
 
 # List directories 
 dir <- list()
@@ -25,11 +27,15 @@ lapply(dir, function(i) dir.create(i, recursive = T, showWarnings = F))
 # 1. Load data ---------------------------------------------------------------
 
 # First load data: Corpus_Short
-load(here(dir$raw.data,"Corpus_Short.Rdata"))
+load(here(dir$raw.data,"Clean_Corpus_CC.Rdata"))
 
 #10% of the original data to prepare cleaning code more efficiently : Corpus.Short.Small
-Corpus.Short.Small <- Corpus.Short %>% 
-  slice_sample(n = 60000)
+Corpus.Short.Small <- Corpus %>% 
+  # slice_sample(n = 60000) %>% 
+  select(TI, AU, AB, SO, PY, DE, ID, AF, TopFive, Top25, TopField, Top10, Top30,
+         TrunkJournals, C1, RP, TC, Z9, U1, U2, J9, JI, PG, CCPub_strict, 
+         CCPub_large, CCPub_largebis, CCPub_narrow, CC)
+
 
 # 2. Prepare variables for author names ----------------------------------------
 
@@ -46,7 +52,7 @@ Corpus.Short.Small.Filt <- Corpus.Short.Small %>%
   filter(nb_authors < 16) %>% # Only keep articles with 15 authors at max (99.95% of the corpus)
   separate(col = AF, into = paste0("author_", 1:15), sep = ";", remove = FALSE, extra = "warn") # I've just changed the extra argument with "warn", to check if there are any mistakes
 
-# Last check: number of articles by number of authors, but using the random sample of 60 000 articles:
+# Check: number of articles by number of authors
 table(Corpus.Short.Small.Filt$nb_authors)
 
 # Then create a column with first name and another with last name
@@ -340,6 +346,92 @@ authors_df <- tibble(firstname = all_firstnames_incorpus, #base de données gén
   arrange(fullname2) %>%
   ungroup()
 
-length(authors_df$fullname2)  
+# 7. Compute the share of gendered authorship for each article ----------------------------------------
+# First, identify all columns proportion male
+proportion_male_cols <- grep("^proportion_male_", colnames(Corpus.CleanedNames.2), value = TRUE)
+proportion_female_cols <- grep("^proportion_female_", colnames(Corpus.CleanedNames.2), value = TRUE)
+
+# Sum male and female probabilities of all authors in the article, only if at least one author is gendered
+Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>% 
+  mutate(
+    sum_gender_male = ifelse(
+      test = nb_authors_gendered == 0,
+      yes = NA,
+      no = rowSums(Corpus.CleanedNames.2[proportion_male_cols], na.rm = TRUE)
+      ),
+    sum_gender_female = ifelse(
+      test = nb_authors_gendered == 0,
+      yes = NA,
+      no = rowSums(Corpus.CleanedNames.2[proportion_female_cols], na.rm = TRUE)
+    )
+  )
+
+# Derive share of male and female authors aong all authors and among only authors with identified gender
+Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>% 
+  mutate(# Male
+    proportion_gender_male_all = ifelse(
+      test = nb_authors_gendered == 0, 
+      yes = NA, 
+      no = sum_gender_male / nb_authors
+      ),
+    proportion_gender_male_id = ifelse(
+      test = nb_authors_gendered == 0,
+      yes = NA,
+      no =  sum_gender_male / nb_authors_gendered
+      ), #Then female:
+    proportion_gender_female_all = ifelse(
+      test = nb_authors_gendered == 0,
+      yes = NA,
+      no = sum_gender_female / nb_authors
+      ),
+    proportion_gender_female_id = ifelse(
+      test = nb_authors_gendered == 0,
+      yes = NA, 
+      no = sum_gender_female / nb_authors_gendered
+      )
+    )
+
+# 8. Generate variable for gender type of co-authorship -----------------------
+# First, create binary variable telling if there is at least one male, and one female
+Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>%
+  # Distinguish case with two authors or more, with case with just one author
+  mutate(
+    AtLeastOneMale = ifelse(
+      test = is.na(sum_gender_male),
+      yes = NA,
+      no = ifelse(
+        test = sum_gender_male > 0.9,
+        yes = 1,
+        no = 0
+        )
+      ),
+    AtLeastOneFemale = ifelse(
+      test = is.na(sum_gender_female),
+      yes = NA,
+      no = ifelse(
+        test = sum_gender_female > 0.9,
+        yes = 1,
+        no = 0)
+      )
+    )
+
+# Then, three categories of co-authorship types: MF, MM, and FF
+Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>%
+  mutate(
+    category_gender = case_when(
+      is.na(sum_gender_female) ~ NA,
+      AtLeastOneMale == 0 & nb_authors_gendered == 1 ~ "F",
+      AtLeastOneFemale == 0 & nb_authors_gendered == 1 ~ "M",
+      AtLeastOneFemale == 0 & nb_authors_gendered > 1 ~ "MM",
+      AtLeastOneMale == 0 & nb_authors_gendered > 1 ~ "FF",
+      AtLeastOneMale == 1 & AtLeastOneFemale == 1 ~ "MF"
+    )
+  )
+
+# Vérification des résultats
+table(Corpus.CleanedNames.2$category_gender, useNA = "ifany")
+
+# 9. Save objects ----------------------------------------
+save(authors_df, Corpus.CleanedNames.2, file = here(dir$prep.data, "GenderedAuthors_Data.Rdata"))
 
 
