@@ -1,0 +1,656 @@
+---
+title: Quantifying interactions between economics of climate change, the rest of economics
+  and other disciplines
+author: ''
+date: "`r format(Sys.time(), '%d/%m/%y')`"
+output:
+  pdf_document: default
+  html_document:
+    css: styles.css
+    keep_md: true
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+# Clean memory 
+rm(list=ls())
+gc()
+
+# Load package
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere, stringr, gender, genderdata, stringi, dplyr, tidyr, genderizeR)
+
+# List directories 
+dir <- list()
+dir$root <- here()
+dir$figures <- here(dir$root, "Figures")
+dir$tables <- here(dir$root, "Tables")
+dir$raw.data <- here(dir$root, "Raw_data")
+dir$prep.data <- here(dir$root, "Prepared_data")
+# Create non existing directories
+lapply(dir, function(i) dir.create(i, recursive = T, showWarnings = F))
+```
+
+```{r, echo=FALSE}
+#Load data 
+
+# First load data: Corpus_Short
+load(here(dir$prep.data, "GenderedAuthors_Data.Rdata"))
+
+#We only work with Corpus.CleanedNames.2
+Corpus.Short.Small <- Corpus.CleanedNames.2
+Corpus.Short <- Corpus.CleanedNames.2
+Corpus.Short.Small.Filt <- Corpus.CleanedNames.2
+Corpus.CleanedNames <- Corpus.CleanedNames.2
+```
+
+## Introduction
+
+Gender disparities in scientific research remain a pressing issue, with significant impacts on the balanced development of the field.
+In particular, gender role positioning and educational restrictions continue to hinder equitable progress in scientific research.
+This study aims to provide a quantitative analysis of these gender disparities *within the specific context of climate economics*, considering various levels of journal prestige and types of collaborations.
+
+Previous research has delved into the broader issue of gender disparities in economics.
+For instance, David Card, Stefano Della Vigna, Patricia Funk, and Nagore Iriberri (2019), in their paper "Are Referees and Editors in Economics Gender Neutral?", examined the role of gender in the evaluation of economic research.
+They highlighted that editorial process is not gender-neutral when considering differences in paper quality and field: female-authored papers get more citations than male-authored papers.
+It shows that female researchers have characteristics that lead to higher citations, especially differences in empirical content but are held to a higher standard, perhaps because of stereotype biases.
+
+Similarly, Junwan Liu, Yinglu Song, and Sai Yang (2019), in their paper "Gender Disparities in the Field of Economics," analyzed gender disparities in terms of research output and influence across different countries, institutions, and journal levels.
+Their findings indicate a dominance of male authors in terms of research output and influence, with significant geographical variations.
+Their study also revealed that the output of both male and female authors decreases logarithmically with career age, while the influence of female authors tends to increase with longer careers due to higher qualifications.
+
+Building on these foundational studies, our research utilizes a larger and more diverse data set, drawing from the Web of Science database and Scopus, which includes information on over 600,000 articles.
+Our analysis focuses on climate economics, aiming to uncover gender disparities by examining differences across journal levels and collaboration types.
+Specifically, we categorize journals into top five and top thirty tiers and analyze the degree of mixed-gender collaborations within these articles.
+Our objective is to validate and extend previous findings within the niche of climate economics, thereby contributing to the understanding of gender inequalities in this crucial area of research.
+
+## Data cleaning and gender assignment algorithm
+
+To accurately assess gender disparities in scientific research, a rigorous data cleaning and gender assignment process is essential.
+This section outlines the methodology employed to clean the data set and assign gender probabilities to authors' first names.
+
+#### Data Cleaning Process
+
+Initially, we considered a sample of 60,000 observations, focusing on articles with 15 authors or fewer, which constitute 99.95% of the data set.
+For each article, we extracted in our initial data base all authors' full names, names and first names.
+The cleaning process aimed to ensure compatibility with the "gender" package in R and involved several steps.
+We applied this cleaning for full names, first and last names.
+We first removed text in brackets, extraneous spaces, in particular those at the beginning and end of names and any letters followed by a period.
+In handling compound names, we retained only the first name.
+Finally, we replaced all accents with their unaccented equivalents.
+These steps ensured that the first names were in a suitable format for gender identification.
+
+#### Gender Assignment Algorithm
+
+After cleaning the data, we utilized the "gender" package in R to associate a gender and gender probabilities to any first name.
+To do so, we first create functions that compute gender probability for a given first name employing two methods: the "ssa" method, which uses data from the US Census List, and the "napp" method, which reallocates gender probabilities for names not identified by the "ssa" method.
+This dual-method approach resulted in a comprehensive data frame combining the results from both methods and giving, for each unique first name, the probability for the name to be female and male.
+This data frame finally gives all first names that for which we have an assigned gender probability.
+
+We then developed an algorithm to assign a gender to each author's first name, using four main databases: the final data frame from the previous gender probability assignment, a list of common Chinese first names, and lists of the top 10 male and female economists.
+This algorithm allows to create three new variables : a variable which attributes a gender to each first name and variables that give the probability for the first name to be male or female.
+
+For the gender variable, the algorithm uses several conditional steps.
+This variable can take value NA, unknown, male or female.
+We first focus on the full name for each author in the algorithm to define the variable gender.
+If the full name is missing in our initial data base, the gender variable is set to NA.
+Otherwise, if the full name is in the list of top 10% of female economists, gender is set to female.
+Reciprocally, if full name is in the list of top 10% of male economists, gender is set to male.
+Then, we treat first name for each author in the algorithm to define the variable gender.
+If first name is missing in our initial data base, gender variable is set to NA.
+If first name is in the list of common chinese first name, gender is set to "unknown".
+If first name is absent from the list of first names with measured gender probability (absent from the data frame that we created during the prevous step), gender is set to "unknown".
+For recognized first names, if the probability of being male in this list was greater than 90%, the name was assigned "male"; if less than 10%, it was assigned "female"; if between 10% and 90%, the gender was marked as "undecided".
+
+Additionally, the algorithm created variables indicating the probability of each first name being male or female, only if gender is assigned.
+These variables are varying between 0 and 1 or take value NA.
+As for the gender variable, the algorithm first treat full names for each author and then first names.
+If the full name is missing from our initial data base, both probabilities are set to NA.
+If the full name is is the list of top 10% of female economists, the probability for the first name to be female is set to 1 and 0 for male.
+Reciprocally, if the full name is in the list of top 10% of male economists, the probability for the first name to be female is set to 0 and 1 for male.
+Then, we treat first name for each author in the algorithm to define probabilities gender.
+If a first name is missing from our initial data base, both probabilities were set to NA.
+If a first name appeared on the list of common Chinese names, both probabilities were also set to NA.
+If first name is absent from the list of first names with measured gender probability (absent from the data frame that we created during the previous step), both probabilities were set to NA.
+If the first name was found and recognized as "male" or "female," the respective probabilities were assigned accordingly from the data frame assigning gender probabilities.
+
+This comprehensive algorithm ensures a robust assignment of gender probabilities to each author's first name, facilitating a detailed analysis of gender disparities in the field of climate economics.
+
+#### Creation of variables of interest: proportion of male and female authors and gender type of co-authorship
+
+Thanks to this algorithm, we are able to calculate the proportion of authors who have been assigned to a male gender among all authors, as well as the proportion of authors who have been assigned to a male gender among authors whose gender has been correctly assigned.
+We are able to make the same type of calculation for the proportion of authors who have been assigned a female gender.
+
+Finally, we generate five variables for gender type of co-authorship.
+These variables are defined as "F" if there is only one author in the article and if this author has a female gender, "M" if there is only one author and if this author has a male gender, "MM" if there is more than 1 author and if these authors are only male, "FF" if there is more than 1 author and if these authors are only female, and finally "MF" if there is more than 1 author and if these authors are both male and female.
+These variables will be useful for the computation of descriptive statistics and further data analysis.
+
+## Quality and limits of the algorithm
+
+Having cleaned up the data and created our algorithm for assigning a gender to each existing first name, we now check the quality of our algorithm.
+
+#### Comparison between total number of first names and first names with assigned gender before the use of an assignation gender algorithm
+
+First and before constructing our algorithm, we can compare the total number of unique first names in our database with the total number of first names that can be correctly assigned to a gender.
+The latter is calculated using the data frame, which uses the "ssa" and "napp" methods to assign a gender to the first name.
+
+```{r, echo=FALSE, include=TRUE}
+all_names_incorpus <- unlist(Corpus.CleanedNames[, grepl("^f_name_", colnames(Corpus.CleanedNames))]) %>% 
+  unique() # Vecteur qui contient tous les prénoms différents dans le corpus
+length(all_names_incorpus)
+```
+
+```{r, echo=FALSE, include=TRUE}
+#length(unique(names_proba_df$name))[1] 24142
+```
+
+We have 95,589 unique first names in our database.
+The total number of first names that can be assigned to a gender thanks to the "ssa" and "napp" method is 24 142.
+We therefore had roughly 75% of first names whose gender which could not be determined only using the SSA and NAPP methods, and which will not be recognized by these methods.
+
+Indeed, unmatched first names appear to come from non-Western cultures.
+These first names are fairly rare and do not recur regularly in the articles, so they have little effect on matching.
+However, this is an important limitation in that we are not able to assign a gender probability to non-Western first names, insofar as those first names will be defined as "unknown" while using the list of common Chinese names in our algorithm.
+This limit omits a whole part of the analysis for non-Western first names and therefore introduces a significant selection bias.
+However, the construction of the algorithm as we did and especially the use of lists for top 10 male and female economists will help us to identify correctly a large part of those unidentified gender.
+
+#### Analysis of gender assignment at author level
+
+##### Checking the algorithm by number of authors per article
+
+To construct an analysis of the gender assignment at author level, we first looked at how well the algorithm is able to assign a genre to authors per article.
+
+```{r, echo=FALSE, include=TRUE}
+ratio_by_nbauthours <- Corpus.CleanedNames.2 %>% 
+  group_by(nb_authors) %>% 
+  summarize(mean_ratio = mean(ratio_identified_gender, na.rm = T),
+            med_ratio = median(ratio_identified_gender),
+            nb_article = n())
+ratio_by_nbauthours
+```
+
+The results show descriptive statistics for the ratio of authors with an identified gender among the total number of authors for articles, grouped by number of authors.
+The results show that the average proportion of authors with an identified gender inreases slightly as the number of authors per article increases For example, articles with a single author have an average of 0.5611 authors with identified gender among the total number of authors, while those with fifteen authors have a higher average of 0.651.
+Regarding the median of the ratios, it decreases with the number of authors per article.
+For instance, articles with one author have a median of 1.0000, indicating that all authors have an identified genre, while this median proportion decreases as the number of authors increases to reach 0.8 for articles with fifteen authors.
+Overall, these trends suggest that in articles with a greater number of authors, it is less likely that all authors have an identified gender, which could be due to greater diversity or less complete author information.
+
+Commentaire: interprétation générale = baisse de la médiane mais la moyenne augmente donc donne des résultats différents - pas sûre de l'interprétation finale et de ce que l'on doit privilégier en termes d'analyse (la moyenne ou la médiane). 
+
+##### Checking the algorithm by number of articles per author
+
+To improve the analysis of the quality of the author-level gender assignment algorithm, we enhance our analysis by checking the algorithm against the number of articles per author.
+
+```{r, echo=FALSE, include=TRUE}
+table(is.na(authors_df$gender))
+```
+
+The table shows statistics on the gender assignment of authors based on the number of articles they have written.
+Out of a total of 827,219 authors, around 93.6% (774,315) have had their gender correctly assigned after the use of the gender assignation algorithm, while around 6.4% (52,904) have missing genders, regardless of the number of articles they have written and independantly of the type of assignation which can be "female", "male", "undecided" or "unknown".
+
+```{r, echo=FALSE, include=TRUE}
+table(authors_df$gender, useNA = "ifany")
+```
+
+Of these, 20.9% (172,987) authors are identified as women, 35.9% (297,279) as men, (4.4% ) 36,540 have an undetermined gender, and 32.3% (267,509) have an unknown gender.
+
+```{r, echo=FALSE, include=TRUE}
+# Check authors that have written more than 10 articles:
+authors_with10articlesormore <- authors_df %>% 
+  filter(n_articles>9)
+authors_with10articlesormore 
+```
+
+A significant proportion of authors therefore have an undecided or unknown gender, due to the large proportion of non-Western first names that we did not manage to assign.
+In particular, the majority of authors with more than 10 articles are East Asian names, which may explain these figures and difficulties in correctly assigning gender due to the diversity of names and gender conventions in this region.
+
+```{r}
+# By number of articles written for each author, how much missing gender?
+table(authors_df$n_articles, authors_df$gender, useNA = "ifany")
+```
+
+Examining authors' gender assignment by number of articles written, we find that the percentage of authors with unassigned genders increases slightly with the number of articles written, suggesting that prolific authors are more likely to have names unrecognized by gender algorithms and highlighting the challenges associated with gender assignment in diverse cultural contexts.
+For instance, among authors, 501 694 have written only 1 article, 44.3% (36 326 + 21 058 + 165 074/501 694) have an "undetermined", "unknown" or complete unassigned gender, while among the authors that have written that have written 273, 292 or 343 articles, 100% have a complete unassigned gender.
+
+Commentaire: l'interprétation n'est pas forcément évidente.
+Ne faudrait-il pas rajouter à ce tableau deux colonnes : une qui compte le nombre d'auteurs qui ont écrit x articles et une qui compte la proportion de «undetermined», «unknown» et «NA» sur le nombre d'auteurs qui ont écrit x articles ?
+Cela permettrait une analyse beaucoup plus simple car à vue d'oeil ce n'est pas sur que l'interprétation soit correcte.
+
+#### Analysis of gender assignment at article level
+
+It is also possible to perform the analysis using the variable that gives, by article, the percentage of authors whose gender is correctly identified among the total number of authors.
+
+```{r, echo=FALSE, include=TRUE}
+Gender_of_Articles <- Corpus.CleanedNames.2 %>% 
+  summarize(Nb_articles = length(ratio_identified_gender), # Nb total d'article
+            NoGender = length(ratio_identified_gender[is.na(ratio_identified_gender) | ratio_identified_gender == 0]) / Nb_articles, # Ratio d'articles avec aucun auteur dont le genre est identifié ou NA # Ratio d'article avec aucun auteur dont le genre est identifié : raouter valeurs manuntes
+            AllGender = length(ratio_identified_gender[ratio_identified_gender == 1])/Nb_articles, # Ratio d'article où tous les auteurs sont identifiés
+            Gender_Larger0.5 = length(ratio_identified_gender[ratio_identified_gender >= 0.5])/Nb_articles, # Ratio d'article où au moins 50% des auteurs sont identifiés
+            Gender_Larger0.9 = length(ratio_identified_gender[ratio_identified_gender >= 0.9])/Nb_articles, # Ratio d'article où au moins 90% des auteurs sont identifiés
+            Gender_Larger0.25 = length(ratio_identified_gender[ratio_identified_gender >= 0.25])/Nb_articles, # Ratio d'article où au moins 25% des auteurs sont identifiés
+            Mean_IdentifiedGender = mean(ratio_identified_gender), # Moyenne du ratio d'auteurs identifé
+            Median_identifiedGender = median(ratio_identified_gender))# Médiane
+
+Gender_of_Articles
+```
+
+Gender analysis at article level shows that around 30% of articles do not allow gender to be assigned to a single author.
+This indicates a significant difficulty in identifying the gender of a significant proportion of articles.
+On the other hand, for over 48% of articles, the gender of all authors is correctly identified.
+This majority proportion demonstrates a certain efficiency in gender assignment.
+For 65% of articles, it is possible to assign the gender to at least half of the authors.
+This shows that most articles have at least partial gender identification among their authors.
+Around half the articles allow gender to be assigned to 90% of the authors.
+This high proportion reflects almost complete gender identification for a significant proportion of articles, illustrating the effectiveness of the algorithms or methods used for gender assignment.
+Finally, for around 70% of the articles, it is possible to assign the gender to 25% of the authors.
+This figure indicates that, even in the most difficult cases, it is still possible to determine the gender of a proportion of authors, which may be sufficient for certain statistical analyses.
+
+## Descriptive statistics and data analysis
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+OneGender_by_Articles <- Corpus.CleanedNames.2 %>% 
+  summarize(Nb_articles = length(ratio_identified_gender), # Nb total d'article
+            NoGender = length(ratio_identified_gender[is.na(ratio_identified_gender) | ratio_identified_gender == 0]) / Nb_articles)
+
+OneGender_by_Articles
+```
+First, we can remind that the absolute number of articles with at least 1 author identified in terms of gender is 1 136 055. Thus, there is at least 70% of our articles whose gender has been assigned to at least one author.
+
+### Proportion of male and female authors at an aggregate level
+
+```{r, echo=FALSE, include=TRUE}
+#amélioration de ton code pour faire un tableau unique 
+# Charger les packages nécessaires
+library(dplyr)
+library(knitr)
+
+# Calcul des statistiques descriptives
+stats_proportion_female_all <- summary(Corpus.CleanedNames.2$proportion_gender_female_all)
+stats_proportion_female_id <- summary(Corpus.CleanedNames.2$proportion_gender_female_id)
+stats_sum_gender_female <- summary(Corpus.CleanedNames.2$sum_gender_female)
+stats_sum_gender_male <- summary(Corpus.CleanedNames.2$sum_gender_male)
+stats_proportion_male_all <- summary(Corpus.CleanedNames.2$proportion_gender_male_all)
+stats_proportion_male_id <- summary(Corpus.CleanedNames.2$proportion_gender_male_id)
+
+# Extraire les valeurs des statistiques descriptives
+extract_summary <- function(summary_obj) {
+  c(summary_obj["Min."], summary_obj["1st Qu."], summary_obj["Median"], summary_obj["Mean"], summary_obj["3rd Qu."], summary_obj["Max."])
+}
+
+# Créer un tableau de données avec les valeurs extraites
+results_table <- data.frame(
+  Statistic = c("Min", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"),
+  Proportion_Female_All = extract_summary(stats_proportion_female_all),
+  Proportion_Female_Id = extract_summary(stats_proportion_female_id),
+  Sum_Gender_Female = extract_summary(stats_sum_gender_female),
+  Sum_Gender_Male = extract_summary(stats_sum_gender_male),
+  Proportion_Male_All = extract_summary(stats_proportion_male_all),
+  Proportion_Male_Id = extract_summary(stats_proportion_male_id)
+)
+
+results_table
+```
+
+This analysis presents descriptive statistics of gender proportions among authors of academic articles.
+Variables analyzed include the proportion of female and male authors, both among all authors and among those whose gender was successfully assigned, as well as the sum of male and female gender probabilities for each article.
+
+The results indicate a wide variation in gender proportions among authors.
+The proportion of female authors among all authors ranges from 0 to 1, with an average of 0.2165, meaning that on average, around 21.65% of authors are female.
+The proportion of female authors among gender-assigned authors has a slightly higher average of 25.62%, suggesting that women may be better identified among authors.
+In comparison, the proportion of male authors among all authors is also highly variable, with an average of 63.77%.
+The proportion of male authors among gender-assigned authors is 74.38% on average, which is higher than for women.
+
+The results therefore reveal a notable under-representation of women among authors of academic articles in terms of proportion.
+These results highlight the need for continued efforts to encourage and support women's participation in the academic field.
+
+```{r, echo=FALSE, include=TRUE}
+hist(Corpus.CleanedNames.2$proportion_gender_male_id, main="Distribution of the proportion of men", xlab="Proportion of men", col="blue", breaks=20)
+hist(Corpus.CleanedNames.2$proportion_gender_female_id, main="Distribution of the proportion of women", xlab="Proportion of women", col="pink", breaks=20)
+```
+
+The graphs below illustrate the distributions of male and female gender proportions among authors whose gender has been assigned.
+The analysis focuses on two separate histograms, one representing the proportion of male authors and the other the proportion of female authors.
+
+The histogram of the proportion of male authors shows a broadly spread distribution, with a high frequency of values close to 1.
+This indicates that a large number of articles have a majority proportion of male authors.
+The distribution also shows a marked asymmetry to the right, reflecting the fact that few articles have a low proportion of male authors.
+
+The histogram of the proportion of female authors reveals a different distribution.
+Most values lie between 0 and 0.5, with a notable peak at the lower values.
+This distribution shows that there are relatively few articles with a high proportion of female authors, and many articles have lower proportions of women.
+In contrast to the distribution for men, this distribution is asymmetrical towards the left, indicating that the predominance of women among authors is less common.
+
+A comparison of these two distributions reveals a significant under-representation of women among authors of academic articles.
+While the proportion of men tends to be high in many articles, that of women remains low in the majority of cases.
+These observations are consistent with previous statistical findings, underlining the need for ongoing efforts to balance gender representation in academia.
+The disparity observed in the distributions calls for reflection on the factors contributing to this inequality, and the development of strategies to promote greater inclusion of women in scientific research.
+
+### Proportion of female and male authors according to different type of collaboration
+
+```{r, echo=FALSE, include=TRUE}
+stats_by_category <- Corpus.CleanedNames.2 %>%
+  group_by(category_gender) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Median_Proportion_Female_Id = median(proportion_gender_female_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
+    Median_Proportion_Male_Id = median(proportion_gender_male_id, na.rm = TRUE),
+  )
+stats_by_category
+```
+
+```{r, echo=FALSE, include=TRUE}
+stats_long <- stats_by_category %>%
+  pivot_longer(cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id), #colonne que l'on veut mettre en format long = moyennes
+               names_to = "Gender", #nouvelle colonne intitulée "Gender"
+               values_to = "Proportion") %>% #valeurs dans une nouvelle colonne intitulée "Proportion"
+  mutate(Gender = ifelse(Gender == "Mean_Proportion_Female_Id", "Female", "Male")) #Si Gender est égal à "Mean_Proportion_Female_Id", alors nous remplaçons cette valeur par "Female". Si Gender est égal à "Mean_Proportion_Male_Id", alors nous remplaçons cette valeur par "Male".
+
+# Créer le graphique
+ggplot(stats_long, aes(x = category_gender, y = Proportion, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Female and Male Authors According to Categorical Variables",
+       x = "Gender Category",
+       y = "Mean Proportion",
+       fill = "Gender") +
+  theme_minimal()
+```
+
+This section presents an analysis of collaboration categories within academic research according to author gender.
+Descriptive statistics include the mean and median proportion of female and male authors assigned per category.
+
+Let's focus on the "MF" category, which represents articles written by authors of both genders.
+The average proportion of female authors in this category is around 46.36%, while the average proportion of male authors is slightly higher, at around 53.64%.
+This near-equality of proportions indicates a remarkable gender parity in mixed collaborations.
+Unlike the "F" and "FF" categories, where women are almost exclusively the sole authors, or the "M" and "MM" categories, where men strongly dominate, the "MF" category shows a more balanced distribution.
+
+This is a significant result, as it underlines the importance of mixed collaborations in achieving a more balanced gender representation in academic research.
+The almost equal presence of men and women in mixed collaborations may reflect a more inclusive and diversified work dynamic.
+This parity in proportions could foster a research environment where the ideas and perspectives of both genders are better represented and integrated.
+Promoting this type of collaboration could be an effective way of reducing gender inequalities in academia.
+Policies and initiatives to encourage mixed-gender collaborations could thus play a crucial role in advancing gender equity in science and research.
+
+### Overall Temporal evolution
+
+```{r, echo=FALSE, include=TRUE}
+annual_stats <- Corpus.CleanedNames.2 %>%
+  group_by(PY) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE)
+  )
+annual_stats
+```
+
+```{r, echo=FALSE, include=TRUE}
+annual_stats_long <- annual_stats %>%
+  pivot_longer(
+    cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id),
+    names_to = "Gender",
+    values_to = "Proportion"
+  ) %>%
+  mutate(Gender = ifelse(Gender == "Mean_Proportion_Female_Id", "Female", "Male"))
+
+# Créer le graphique
+ggplot(annual_stats_long, aes(x = PY, y = Proportion, color = Gender)) +
+  geom_line(linewidth = 1) +
+  labs(title = "Evolution of Gender Proportions Over Time",
+       x = "Publication Year",
+       y = "Mean Proportion",
+       color = "Gender") +
+  theme_minimal()
+```
+
+This section presents the evolution of the average proportion of female and male authors in academic publications, from 1950 to 2023.
+It reveals significant trends over several decades, highlighting gender dynamics in academic research.
+
+From 1950 to 1970, the average proportion of female authors remained remarkably low, hovering around 0.06. During this period, male authors largely dominated publications, with proportions approaching 0.94. This disparity underlines the predominance of men in the academic field at the time.
+
+Between 1970 and 1990, a slight increase in the proportion of female authors was observed, rising from around 0.12 to 0.15. This period marks the beginning of a gradual change, although men continue to represent a substantial majority.The increase remains modest, but indicates a trend towards gender diversification among academic authors.
+
+From the 1990s onwards, the average proportion of female authors began to rise more significantly. By 1995, this proportion had risen to around 0.18, indicating greater inclusion of women in academic publications. This trend has continued steadily, with the proportion reaching around 0.30 in 2017. At the same time, the average proportion of male authors is gradually decreasing, but remains dominant.
+
+Since 2017, the average proportion of female authors has exceeded 0.30, reaching 0.32 in 2020. This growth indicates increasing gender parity, although men continue to constitute a relative majority with an average proportion around 0.68. Recent years have seen a stabilization of these proportions, with slight fluctuations.
+
+In conclusion, this section illustrates a positive trend towards greater inclusion of women in academic research over the decades. Although men are still in the majority, the continuing growth in the proportion of female authors bears witness to a gradual shift towards more balanced gender representation in scientific publications.
+
+### Temporal evolution according to categorical variables
+
+```{r, echo=FALSE, include=TRUE}
+# Calculer les moyennes annuelles des proportions de genres par catégorie de genre
+# Calculer les moyennes annuelles des proportions de genres par catégorie de genre
+annual_stats_by_category <- Corpus.CleanedNames.2 %>%
+  group_by(PY, category_gender) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
+    .groups = 'drop' #`summarise()` has grouped output by 'PY'. You can override using the `.groups` argument.
+  )
+
+annual_stats_by_category
+```
+
+```{r, echo=FALSE, include=TRUE}
+# Restructurer les données pour ggplot2
+annual_stats_by_category_long <- annual_stats_by_category %>%
+  pivot_longer(
+    cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id),
+    names_to = "Gender",
+    values_to = "Proportion"
+  ) %>%
+  mutate(Gender = ifelse(Gender == "Mean_Proportion_Female_Id", "Female", "Male"))
+
+# Créer le graphique
+ggplot(annual_stats_by_category_long, aes(x = PY, y = Proportion, color = Gender)) +
+  geom_line(size = 1) +
+  facet_wrap(~ category_gender) +
+  labs(title = "Evolution of Gender Proportions Over Time by Category",
+       x = "Publication Year",
+       y = "Mean Proportion",
+       color = "Gender") +
+  theme_minimal()
+```
+
+This section provides an analysis of the evolution of average author proportions by gender from 1950 to 2023, and highlights significant dynamics in academic collaborations. 
+
+Analysis of gender proportions in mixed collaborations (MF) from 1950 to 2023 reveals that in 1950, female authors represented an average of 37% of mixed teams, compared with 63% for male authors. This male dominance persisted until the 1960s. In the 1970s, the average proportion of female authors reached 48%, marking progress towards greater integration of women. From the 2000s onwards, the proportion of women authors continued to rise, although at just under 46%, reflecting a positive trend towards greater parity.
+
+The data thus show a gradual integration of women into mixed collaborations, indicating steady progress towards gender parity in academic research, despite the persistence of a slight male majority.
+
+### Temporal evolution according to categorical variables, by number of articles
+
+```{r, echo=FALSE, include=TRUE}
+annual_stats_by_category_nbarticles <- Corpus.CleanedNames.2 %>%
+  group_by(PY, category_gender) %>%
+  summarize(
+    nb_articles=n()
+    )
+
+annual_stats_by_category_nbarticles
+```
+
+```{r, echo=FALSE, include=TRUE}
+ggplot(annual_stats_by_category_nbarticles, aes(x = PY, y = nb_articles, color = category_gender, group = category_gender)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(title = "Number of Articles by Year and Gender Category",
+       x = "Publication Year",
+       y = "Number of Articles",
+       color = "Gender Category") +
+  theme_minimal() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)))
+```
+
+Analysis of data on the number of articles by gender category from 1950 to 2021 reveals some interesting, albeit nuanced, trends. In 1950, the "M" category (exclusively male) dominated, with 491 articles. The "F" (all-female) and "MF" (mixed) categories accounted for 27 and 12 items respectively.
+
+In subsequent years, trends changed significantly. For example, in 1960, although the "M" category remained dominant with 381 items, the "F" and "MM" categories showed an increase compared to 1950. However, missing data also began to appear more pronounced.
+
+The 1970s mark a notable change, with a significant increase in the number of articles in all categories, including a notable rise in missing data. The "F" category began to show gradual growth, reaching 130 articles in 1970.
+
+From the 2000s onwards, all categories see a marked increase in the number of articles, reflecting a global expansion of academic research. The "MF" (mixed collaboration) category grows particularly rapidly, peaking in 2021 with 16,267 articles, but missing data also increases drastically.
+
+In conclusion, these data illustrate not only the quantitative expansion of scientific research over the decades, but also changes in the gendered composition of research teams, with a significant increase in mixed collaboration. However, it is crucial to take into account the impact of missing data, which can influence the interpretation of these upward trends.
+
+### Analysis of articles on climate change at an aggregate level 
+
+```{r, echo=FALSE, include=TRUE}
+# Calculer les statistiques descriptives pour chaque catégorie de la variable binaire "CC"
+stats_by_CC <- Corpus.CleanedNames.2 %>%
+  group_by(CC) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Median_Proportion_Female_Id = median(proportion_gender_female_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
+    Median_Proportion_Male_Id = median(proportion_gender_male_id, na.rm = TRUE)
+  )
+
+stats_by_CC
+```
+
+```{r, echo=FALSE, include=TRUE}
+# Conversion en format long
+stats_long <- stats_by_CC %>%
+  pivot_longer(cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id),
+               names_to = "Gender",
+               values_to = "Proportion")
+
+ggplot(stats_long, aes(x = factor(CC), y = Proportion, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Female and Male Authors by CC Category",
+       x = "CC Category",
+       y = "Mean Proportion",
+       fill = "Gender") +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_minimal()
+```
+
+Analysis of the data on articles relating to climate change, grouped according to the binary variable "CC" (climate change), reveals notable differences in the gendered composition of authors.
+
+Looking at the descriptive statistics, we see that in the category where the theme of climate change is central ("CC = 1"), the average proportion of female authors is slightly higher than in the "CC = 0" category. In detail, the average proportion of female authors is 28.29% in the "CC = 1" category, compared with 25.53% in the "CC = 0" category. On the other hand, the "CC = 0" category shows a greater predominance of male authors, with an average of 74.47%, compared to the "CC = 1" category where the average is 71.71%.
+
+These results highlight a distinct gendered distribution in climate change-related publications, with a predominance of male authors in both categories but more female authors in articles that focus on climate change, thus indicating varied dynamics in gender participation depending on the specific research theme. 
+
+### Climate change, category gender and number of articles
+
+```{r, echo=FALSE, include=TRUE}
+stats_by_CC_category_gender <- Corpus.CleanedNames.2 %>%
+  group_by(CC, category_gender) %>%
+  summarize(nb_articles = n(), .groups = 'drop')
+
+stats_by_CC_category_gender
+```
+
+```{r, echo=FALSE, include=TRUE}
+# Calculer la proportion des articles pour chaque combinaison de CC et category_gender
+stats_by_CC_category_gender <- stats_by_CC_category_gender %>%
+  group_by(CC) %>%
+  mutate(proportion_articles = nb_articles / sum(nb_articles))
+
+# Graphique
+ggplot(stats_by_CC_category_gender, aes(x = factor(CC), y = proportion_articles, fill = category_gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Articles by Collaboration Type and Climate Change Relevance",
+       x = "Climate Change Relevance (CC)",
+       y = "Proportion of Articles",
+       fill = "Collaboration Type") +
+  theme_minimal()
+```
+
+Analysis of the data on the number of articles relating to climate change, represented by the binary variable "CC" (climate change) and the gender category, reveals some interesting trends in the distribution of publications.
+
+Looking at the descriptive statistics, we observe a marked disparity in the number of articles published according to gender category and type of scientific research. In the "CC = 0" category (not focused on climate change), the distribution of articles by gender is significantly different from that observed in the "CC = 1" category (focused on climate change).
+
+For the "CC = 0" category, which does not deal specifically with climate change, the data show a significant predominance of articles attributed to the masculine (296,893 articles) and feminine (86,249 articles) genders, followed by mixed gender combinations (167,934 articles for MF, 188,404 articles for MM). In contrast, the "CC = 1" category shows lower overall articles numbers, with a similar trend of male predominance, but with a slightly higher proportion of items attributed to mixed gender combinations (8,310 articles for MF, 7,149 articles for MM). Analysis of the number of articles by genre category therefore reveals that, despite the lower overall quantity of articles in the "CC = 1" category, mixed-genre combinations account for a significant share compared with the other categories, underlining an increased diversity in scientific collaborations focused on climate change.
+
+### Temporal evolution of the proportion of female authors by CC
+
+```{r, echo=FALSE, include=TRUE}
+annual_stats_by_CC <- Corpus.CleanedNames.2 %>%
+  group_by(PY, CC) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+annual_stats_by_CC
+```
+
+```{r, echo=FALSE, include=TRUE}
+ggplot(annual_stats_by_CC, aes(x = PY, y = Mean_Proportion_Female_Id, color = factor(CC))) +
+  geom_line(size = 1) +
+  labs(title = "Evolution of Mean Proportion of Female Authors Over Time",
+       x = "Publication Year",
+       y = "Mean Proportion of Female Authors",
+       color = "Climate Change Relevance (CC)") +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 1)) # Ajuster les limites de l'ordonnée pour aller de 0 à 1
+```
+
+This section provides descriptive statistics and an analysis of the time trend in the proportion of authors identified as "women", for articles dealing with climate change ("CC" = 1) compared with articles not dealing with climate change (CC = 0). 
+Analysis of the results shows an upward trend in the proportion of women in both categories. For example, in 1983, the proportion of women authors was 13.5%, whereas it was 30.1% in 2017. For articles on climate change, the proportion was 0.4% in 1989, compared with 23% in 2023. The increase in the proportion of women is therefore more marked in climate economics research than in other types of economic research. 
+
+###.Focus on Top5 and Top30 journals and on climte change
+
+```{r, echo=FALSE, include=TRUE}
+# Calculer les statistiques descriptives pour chaque combinaison de catégorie de journaux et de la variable binaire "CC"
+stats_by_top5journal_CC <- Corpus.CleanedNames.2 %>%
+  group_by(TopFive, CC) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Median_Proportion_Female_Id = median(proportion_gender_female_id, na.rm = TRUE),
+    Median_Proportion_Male_Id = median(proportion_gender_male_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
+  )
+stats_by_top5journal_CC
+```
+
+```{r, echo=FALSE, include=TRUE}
+# Calculer les statistiques descriptives pour chaque combinaison de catégorie de journaux et de la variable binaire "CC"
+stats_by_top30journal_CC <- Corpus.CleanedNames.2 %>%
+  group_by(Top30, CC) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Median_Proportion_Female_Id = median(proportion_gender_female_id, na.rm = TRUE),
+    Median_Proportion_Male_Id = median(proportion_gender_male_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
+  )
+stats_by_top30journal_CC
+```
+This section provides descriptive statistics on the proportion of women and men by journal type and research theme.
+For articles not related to climate change (CC = 0), the average proportion of female authors is higher in Top 30 journals (26.05%) than in Top 5 journals (14.26%). This suggests a more significant representation of female authors in the lower-quality newspapers for this type of article.
+
+On the other hand, for articles on climate change (CC = 1), although the trend is similar, with a higher average proportion of female authors in Top 30 (13.80%) compared to Top 5 (12.41%), the gap is less marked than for articles not related to climate change.
+
+```{r, echo=FALSE, include=TRUE}
+ggplot(Corpus.CleanedNames.2, aes(x = factor(Top30), y = proportion_gender_female_id)) +
+  geom_boxplot() +
+  labs(title = "Proportion of Female Authors in Top 30 Journals",
+       x = "Top 30 Journals",
+       y = "Mean Proportion of Female Authors") +
+  facet_wrap(~ CC, scales = "free")
+
+ggplot(Corpus.CleanedNames.2, aes(x = factor(Top30), y =proportion_gender_male_id)) +
+  geom_boxplot() +
+  labs(title = "Proportion of Male Authors in Top 30 Journals",
+       x = "Top 30 Journals",
+       y = "Mean Proportion of Female Authors") +
+  facet_wrap(~ CC, scales = "free")
+```
+
+### Conclusion 
+
+In conclusion, this study provides a comprehensive quantitative analysis of gender disparities within the field of climate economics, focusing on authorship dynamics across different levels of journal prestige and types of collaborations. Our findings underscore several key observations. While strides have been made towards gender equality in academic authorship, persistent disparities necessitate ongoing efforts to promote diversity and inclusivity in research collaborations and methodologies. Addressing these challenges is essential for advancing a more equitable and representative academic landscape in climate economics and beyond.
+
+Firstly, our data analysis reveals persistent gender imbalances in academic publishing, with a notable underrepresentation of female authors across all categories. While the average proportion of female authors is slightly higher in climate change-related articles compared to those not focused on climate change, both areas exhibit a predominantly male authorship landscape.
+Secondly, our study highlights the impact of collaboration types on gender representation. Mixed-gender collaborations (MF) demonstrate a more balanced distribution of authors, suggesting that fostering such collaborations could contribute to greater gender equity in academic research.
+Moreover, our analysis of temporal trends reveals a gradual increase in the proportion of female authors over the decades, indicating positive albeit slow progress towards gender parity in academic publishing. This trend is more pronounced in climate economics compared to broader economic research, reflecting evolving dynamics within specific research domains.
+However, our study also identifies significant challenges in gender assignment methodologies, particularly in handling non-Western names, which remain a crucial limitation affecting the accuracy and inclusivity of gender analyses in academic research.

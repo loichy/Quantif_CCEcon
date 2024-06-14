@@ -43,11 +43,11 @@ lapply(dir, function(i) dir.create(i, recursive = T, showWarnings = F))
 
 ```{r}
 # First load data: Corpus_Short
-load(here(dir$raw.data,"Corpus_Short.Rdata"))
+load(here(dir$prep.data, "GenderedAuthors_Data.Rdata"))
 
 #10% of the original data : Corupus.Short.Small
-Corpus.Short.Small <- Corpus.Short %>% 
-  slice_sample(n = 60000)
+Corpus.Short.Small <- Corpus.CleanedNames.2
+Corpus.Short <- Corpus.CleanedNames.2
 ```
 
 ### Step 1: Creation of new columns for each author and for each article
@@ -100,6 +100,7 @@ print(results)
 ```
 
 ### Step 2 : Create a column for each last name (l_name) and first name (f_name).
+
 f_name will be used during all the analysis of the gender.
 
 ```{r}
@@ -123,6 +124,7 @@ Corpus.Short.Small.Filt %>%
 ```
 
 ### Step 3 : Cleaning in two steps: - first step -\> removing spaces and uniformize character encoding of first names and last names to then generate a column "fullname_i" which is made of first name and last name.
+
 This column will be the one used to match with the list of female economists (which is made of female economists full names) - second step -\> continue cleaning of the firstnames columns (remove special characters, punctuations and isolated letters).
 This will give us first names columns that are cleaned and ready to be used with the gender command
 
@@ -593,13 +595,14 @@ table(authors_df$n_articles, authors_df$gender, useNA = "ifany") #False : auteur
 
 Overall we have about 25% of authors with unidentified gender (30 000/80 000).
 When we will work at the level of the article, we thus will reduce the amount of articles with unassigned gender proportion of authorship as there are articles with multiple authors (and among them, at least some will have an assigned gender).
-The more the number of authors is important, the higher the prob of assigning  gender to the article is higher
+The more the number of authors is important, the higher the prob of assigning gender to the article is higher
 
 For instance, among authors that have written 1 article, about 76 000 have an assigned gender, and 29 000 have a missing info on gender (about 25% of missing gender).
 La ratio diminue jusqu'aux auteurs avec 6 articles (15% de genre non assignés), puis ensuite le fait de travailler sur un échantillon aléatoire du corpus semble brouill l'information.
 Mais il semble qu'il y ait des auteurs importants (avec plus de 10 articles), dont le genre n'est pas assigné (souvent des auteurs d'asie de l'est).
 
-Depuis l'aout de top_10_male_economists, les auteurs principaux (qui écrivent beaucoup d’articles) sont correctement assgnés. Rq : disparition de l'auteur qui avait écrit 54 articles.
+Depuis l'aout de top_10_male_economists, les auteurs principaux (qui écrivent beaucoup d'articles) sont correctement assgnés.
+Rq : disparition de l'auteur qui avait écrit 54 articles.
 
 # Step 7 : Agregation at the level of the article
 
@@ -633,7 +636,7 @@ plot(Corpus.CleanedNames.2$proportion_gender_female_all, Corpus.CleanedNames.2$p
 Sur la ligne à 45 degrés, nous avons les articles pour lesquels tous les auteurs ont un genre qui est identifié.
 Et au dessus de la ligne à 45 degrés, les articles pour lesquels certains auteurs n'ont pas de genre identifiés.
 
-Analyse de l'assignation du genre à l'échelle de l'article : 
+Analyse de l'assignation du genre à l'échelle de l'article :
 
 Il est aussi possible de faire l'analyse à partir de la variable "ratio_identified_gender", qui donne par article, le pourcentage d'auteurs dans le nb d'auteurs totale dont le genre est identifié
 
@@ -657,7 +660,7 @@ Pour 75% des articles nous sommes capable d'assigner la moitié des auteurs.
 Pour la moitié des articles nous sommes capable d'assigner le genre de 90% des auteurs.
 Pour environ 80% des articles, nous pouvons assigner le genre de 25% des auteurs.
 
-## Step 8 : Analyse de l'assignation du genre à l'échelle des auteurs : 
+## Step 8 : Analyse de l'assignation du genre à l'échelle des auteurs :
 
 ```{r}
 # Check 100 first authors without gender and most articles
@@ -668,7 +671,7 @@ NotGendered_authors <- authors_df %>%
 NotGendered_authors #30 454 auteurs qui n'ont pas été assignés sur 111 116 auteurs différents (27% d'auteurs non assignés)
 ```
 
-## Step 9 : Creation of categorical variables : 
+## Step 9 : Creation of categorical variables :
 
 ```{r}
 #Création de variables binaires : sum_gender_male_bin est défini comme 1 si sum_gender_male est supérieur à 0, sinon 0 (il y a forcément 1 homme auteur), sum_gender_female_bin est défini comme 1 si sum_gender_female est supérieur à 0, sinon 0.
@@ -692,9 +695,9 @@ Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>%
 table(Corpus.CleanedNames.2$category_gender)
 ```
 
-# Step 10 : Descriptive Statistics
+# Step 10 : Descriptive Statistics : commencer ici
 
-First step : determine the absolute number of articles with at least 1 author identified in terms of gender with NoGender 
+First step : determine the absolute number of articles with at least 1 author identified in terms of gender with NoGender
 
 ```{r}
 load(here(dir$prep.data, "GenderedAuthors_Data.Rdata"))
@@ -704,7 +707,8 @@ OneGender_by_Articles <- Corpus.CleanedNames.2 %>%
 
 OneGender_by_Articles
 ```
-Il y a au moins 85% des articles dont le genre a été assigné à au moins un auteur. 
+
+Il y a au moins 85% des articles dont le genre a été assigné à au moins un auteur.
 
 ## 1. Study of the sum_gender_female variable at an aggregate level
 
@@ -748,6 +752,7 @@ results_table <- data.frame(
 
 results_table
 ```
+
 En moyenne, parmi tous les auteurs, il y a 20% de femmes par article.
 La part d'auteur femme en moyenne est de 30% (en mesurant la part parmi les auteurs dont le genre est identifié, par article).
 
@@ -767,9 +772,10 @@ En moyenne 30% et 70% de femmes parmi les auteurs dont le genre a été identifi
 hist(Corpus.CleanedNames.2$proportion_gender_male_id, main="Distribution de la proportion d'hommes", xlab="Proportion d'hommes", col="blue", breaks=20)
 hist(Corpus.CleanedNames.2$proportion_gender_female_id, main="Distribution de la proportion de femmes", xlab="Proportion de femmes", col="pink", breaks=20)
 ```
-- Distribution de femmes : la distribution est centrée vers la gauche donc beaucoup d'articles avec aucune femme (+ de 2500) avec très peu de valeurs au milieu de la distirbution et moins d'articles avec seulement des femmes (environ 10 000)
-- Distribution d'hommes : la distribution est centrée vers la droite donc beaucoup d'articles que des hommes (+ de 2500) avec très peu de valeurs au milieu de la distirbution et moins d'articles avec aucun homme (environ 8 000)
-- Peu de collaboration car peu de valeurs centrées
+
+-   Distribution de femmes : la distribution est centrée vers la gauche donc beaucoup d'articles avec aucune femme (+ de 2500) avec très peu de valeurs au milieu de la distirbution et moins d'articles avec seulement des femmes (environ 10 000)
+-   Distribution d'hommes : la distribution est centrée vers la droite donc beaucoup d'articles que des hommes (+ de 2500) avec très peu de valeurs au milieu de la distirbution et moins d'articles avec aucun homme (environ 8 000)
+-   Peu de collaboration car peu de valeurs centrées
 
 ```{r}
 #Distribution of sum_gender_male : bar chart
@@ -801,9 +807,10 @@ stats_by_category <- Corpus.CleanedNames.2 %>%
   )
 stats_by_category
 ```
-- Catégorie FF : moyenne et médiane de 100% de femmes (logique)
-- Catégorie MM : moyenne et médiane de 100% d'hommes (logique)
-- Catégorie MF : 30% de femmes en moyenne pour les articles collaboratifs et 70% d'hommes
+
+-   Catégorie FF : moyenne et médiane de 100% de femmes (logique)
+-   Catégorie MM : moyenne et médiane de 100% d'hommes (logique)
+-   Catégorie MF : 30% de femmes en moyenne pour les articles collaboratifs et 70% d'hommes
 
 ### 1.2.2 Graphics : Proportion of female and male authors according to categorical variables
 
@@ -823,7 +830,8 @@ ggplot(stats_long, aes(x = category_gender, y = Proportion, fill = Gender)) +
        fill = "Gender") +
   theme_minimal()
 ```
-On retrouve les résultats des statistiques descriptives avec environ 30% de femmes et 70% d'homems pour les articles collaboratifs. 
+
+On retrouve les résultats des statistiques descriptives avec environ 30% de femmes et 70% d'homems pour les articles collaboratifs.
 
 ```{r}
 #library(ggridges)
@@ -848,6 +856,7 @@ annual_stats <- Corpus.CleanedNames.2 %>%
   )
 annual_stats
 ```
+
 La proportion moyenne de femmes dans les articles publiés semble augmenter progressivement, d'environ 24,39% en 2011 à environ 33,17% en 2020.
 En parallèle, la proportion moyenne d'hommes diminue légèrement sur la même période, passant d'environ 75,61% en 2011 à environ 66,83% en 2020.
 Evolution vers une plus grande diversité de genres dans les publications au fil du temps, avec une augmentation de la représentation des femmes dans les articles
@@ -873,7 +882,6 @@ ggplot(annual_stats_long, aes(x = PY, y = Proportion, color = Gender)) +
   theme_minimal()
 ```
 
-
 ```{r}
 # Distribution of female authors accross time
 #ggplot(Corpus.Short, aes(x = PY, y = sum_gender_female)) + geom_point() + labs(title = "Proportion of female authors across time", x = "Publication date", y = "Proportion") + scale_y_continuous(breaks = seq(0, 20, by = 1), limits = c(0, 20))
@@ -898,6 +906,7 @@ annual_stats_by_category <- Corpus.CleanedNames.2 %>%
 
 annual_stats_by_category
 ```
+
 ```{r}
 # Restructurer les données pour ggplot2
 annual_stats_by_category_long <- annual_stats_by_category %>%
@@ -918,10 +927,11 @@ ggplot(annual_stats_by_category_long, aes(x = PY, y = Proportion, color = Gender
        color = "Gender") +
   theme_minimal()
 ```
-L'analyse de l'évolution temporelle de la proportion de femmes dans les collaborations mixtes (MF) montre une tendance à la hausse, bien que légèrement variable d'une année à l'autre. En 2011, la proportion moyenne de femmes dans les collaborations MF était d'environ 24,77%, et cette proportion a augmenté progressivement au fil des années pour atteindre environ 31,17% en 2020. 
 
+L'analyse de l'évolution temporelle de la proportion de femmes dans les collaborations mixtes (MF) montre une tendance à la hausse, bien que légèrement variable d'une année à l'autre.
+En 2011, la proportion moyenne de femmes dans les collaborations MF était d'environ 24,77%, et cette proportion a augmenté progressivement au fil des années pour atteindre environ 31,17% en 2020.
 
-### 1.4.2. Descriptive statistics : temporal evolution according to categorical variables,  by number of articles
+### 1.4.2. Descriptive statistics : temporal evolution according to categorical variables, by number of articles
 
 ```{r}
 annual_stats_by_category_nbarticles <- Corpus.CleanedNames.2 %>%
@@ -962,6 +972,7 @@ stats_by_CC <- Corpus.CleanedNames.2 %>%
 
 stats_by_CC
 ```
+
 ```{r}
 # Conversion en format long
 stats_long <- stats_by_CC %>%
@@ -978,9 +989,12 @@ ggplot(stats_long, aes(x = factor(CC), y = Proportion, fill = Gender)) +
   scale_y_continuous(limits = c(0, 1)) +
   theme_minimal()
 ```
-Interprétation : en moyenne, la proportion d'auteurs féminins dans les articles liés au changement climatique est légèrement plus faible que dans les articles non liés au changement climatique, avec des moyennes de 29,99% et 29,75% respectivement. En revanche, la proportion d'auteurs masculins est plus élevée dans les articles sur le changement climatique, avec une moyenne de 70,26%, comparativement à 70,06% pour les autres articles.
 
-##2.2. Climate change, category gender and number of articles
+Interprétation : en moyenne, la proportion d'auteurs féminins dans les articles liés au changement climatique est légèrement plus faible que dans les articles non liés au changement climatique, avec des moyennes de 29,99% et 29,75% respectivement.
+En revanche, la proportion d'auteurs masculins est plus élevée dans les articles sur le changement climatique, avec une moyenne de 70,26%, comparativement à 70,06% pour les autres articles.
+
+##2.2.
+Climate change, category gender and number of articles
 
 ```{r}
 stats_by_CC_category_gender <- Corpus.CleanedNames.2 %>%
@@ -1018,6 +1032,7 @@ annual_stats_by_CC <- Corpus.CleanedNames.2 %>%
 
 annual_stats_by_CC
 ```
+
 ```{r}
 ggplot(annual_stats_by_CC, aes(x = PY, y = Mean_Proportion_Female_Id, color = factor(CC))) +
   geom_line(size = 1) +
@@ -1028,6 +1043,7 @@ ggplot(annual_stats_by_CC, aes(x = PY, y = Mean_Proportion_Female_Id, color = fa
   theme_minimal() +
   scale_y_continuous(limits = c(0, 1)) # Ajuster les limites de l'ordonnée pour aller de 0 à 1
 ```
+
 Increase of female authors regarding climate change articles and decrase for non climate change related articles
 
 ##3.Focus on Top5 and Top30 and on climte change
@@ -1062,10 +1078,10 @@ ggplot(Corpus.CleanedNames.2, aes(x = factor(Top30), y =proportion_gender_male_i
        y = "Mean Proportion of Female Authors") +
   facet_wrap(~ CC, scales = "free")
 ```
-Articles qui portent sur le CC : la proportion de femme dans le top 30 est beaucoup plus grande 
-Articles qui portent sur le CC et qui ne sont pas dans le top 30 : mediane de la proportion de femmes un peu plus élevée
 
-## 2. Geography 
+Articles qui portent sur le CC : la proportion de femme dans le top 30 est beaucoup plus grande Articles qui portent sur le CC et qui ne sont pas dans le top 30 : mediane de la proportion de femmes un peu plus élevée
+
+## 2. Geography
 
 Affiliation data `C1`and `RP` variables.
 We'd like to identify each countries in which authors of the articles are affiliated.
