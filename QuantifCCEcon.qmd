@@ -161,6 +161,10 @@ However, the construction of the algorithm as we did and especially the use of l
 
 #### Analysis of gender assignment at author level
 
+```{r}
+summary(Corpus.CleanedNames.2$ratio_identified_gender)
+```
+
 ##### Checking the algorithm by number of authors per article
 
 To construct an analysis of the gender assignment at author level, we first looked at how well the algorithm is able to assign a genre to authors per article.
@@ -177,7 +181,7 @@ ratio_by_nbauthours
 The results show descriptive statistics for the ratio of authors with an identified gender among the total number of authors for articles, grouped by number of authors.
 The results show that the average proportion of authors with an identified gender inreases slightly as the number of authors per article increases For example, articles with a single author have an average of 0.5611 authors with identified gender among the total number of authors, while those with fifteen authors have a higher average of 0.651.
 Regarding the median of the ratios, it decreases with the number of authors per article.
-For instance, articles with one author have a median of 1.0000, indicating that all authors have an identified genre, while this median proportion decreases as the number of authors increases to reach 0.8 for articles with fifteen authors.
+For instance, articles with one author have a median of 1.0000, indicating that more than/at least 50% of articles with one author have an identified genre, while this median proportion decreases as the number of authors increases to reach 0.8 for articles with fifteen authors.
 Overall, these trends suggest that in articles with a greater number of authors, it is less likely that all authors have an identified gender, which could be due to greater diversity or less complete author information.
 
 Commentaire: interprétation générale = baisse de la médiane mais la moyenne augmente donc donne des résultats différents - pas sûre de l'interprétation finale et de ce que l'on doit privilégier en termes d'analyse (la moyenne ou la médiane). 
@@ -212,6 +216,7 @@ In particular, the majority of authors with more than 10 articles are East Asian
 ```{r}
 # By number of articles written for each author, how much missing gender?
 table(authors_df$n_articles, authors_df$gender, useNA = "ifany")
+# Alternative: interprétation en pourcentage, et regrouper par décile. 
 ```
 
 Examining authors' gender assignment by number of articles written, we find that the percentage of authors with unassigned genders increases slightly with the number of articles written, suggesting that prolific authors are more likely to have names unrecognized by gender algorithms and highlighting the challenges associated with gender assignment in diverse cultural contexts.
@@ -263,7 +268,9 @@ OneGender_by_Articles <- Corpus.CleanedNames.2 %>%
 
 OneGender_by_Articles
 ```
-First, we can remind that the absolute number of articles with at least 1 author identified in terms of gender is 1 136 055. Thus, there is at least 70% of our articles whose gender has been assigned to at least one author.
+
+First, we can remind that the absolute number of articles with at least 1 author identified in terms of gender is 1 136 055.
+Thus, there is at least 70% of our articles whose gender has been assigned to at least one author.
 
 ### Proportion of male and female authors at an aggregate level
 
@@ -413,15 +420,24 @@ ggplot(annual_stats_long, aes(x = PY, y = Proportion, color = Gender)) +
 This section presents the evolution of the average proportion of female and male authors in academic publications, from 1950 to 2023.
 It reveals significant trends over several decades, highlighting gender dynamics in academic research.
 
-From 1950 to 1970, the average proportion of female authors remained remarkably low, hovering around 0.06. During this period, male authors largely dominated publications, with proportions approaching 0.94. This disparity underlines the predominance of men in the academic field at the time.
+From 1950 to 1970, the average proportion of female authors remained remarkably low, hovering around 0.06.
+During this period, male authors largely dominated publications, with proportions approaching 0.94.
+This disparity underlines the predominance of men in the academic field at the time.
 
-Between 1970 and 1990, a slight increase in the proportion of female authors was observed, rising from around 0.12 to 0.15. This period marks the beginning of a gradual change, although men continue to represent a substantial majority.The increase remains modest, but indicates a trend towards gender diversification among academic authors.
+Between 1970 and 1990, a slight increase in the proportion of female authors was observed, rising from around 0.12 to 0.15.
+This period marks the beginning of a gradual change, although men continue to represent a substantial majority.The increase remains modest, but indicates a trend towards gender diversification among academic authors.
 
-From the 1990s onwards, the average proportion of female authors began to rise more significantly. By 1995, this proportion had risen to around 0.18, indicating greater inclusion of women in academic publications. This trend has continued steadily, with the proportion reaching around 0.30 in 2017. At the same time, the average proportion of male authors is gradually decreasing, but remains dominant.
+From the 1990s onwards, the average proportion of female authors began to rise more significantly.
+By 1995, this proportion had risen to around 0.18, indicating greater inclusion of women in academic publications.
+This trend has continued steadily, with the proportion reaching around 0.30 in 2017.
+At the same time, the average proportion of male authors is gradually decreasing, but remains dominant.
 
-Since 2017, the average proportion of female authors has exceeded 0.30, reaching 0.32 in 2020. This growth indicates increasing gender parity, although men continue to constitute a relative majority with an average proportion around 0.68. Recent years have seen a stabilization of these proportions, with slight fluctuations.
+Since 2017, the average proportion of female authors has exceeded 0.30, reaching 0.32 in 2020.
+This growth indicates increasing gender parity, although men continue to constitute a relative majority with an average proportion around 0.68.
+Recent years have seen a stabilization of these proportions, with slight fluctuations.
 
-In conclusion, this section illustrates a positive trend towards greater inclusion of women in academic research over the decades. Although men are still in the majority, the continuing growth in the proportion of female authors bears witness to a gradual shift towards more balanced gender representation in scientific publications.
+In conclusion, this section illustrates a positive trend towards greater inclusion of women in academic research over the decades.
+Although men are still in the majority, the continuing growth in the proportion of female authors bears witness to a gradual shift towards more balanced gender representation in scientific publications.
 
 ### Temporal evolution according to categorical variables
 
@@ -460,9 +476,12 @@ ggplot(annual_stats_by_category_long, aes(x = PY, y = Proportion, color = Gender
   theme_minimal()
 ```
 
-This section provides an analysis of the evolution of average author proportions by gender from 1950 to 2023, and highlights significant dynamics in academic collaborations. 
+This section provides an analysis of the evolution of average author proportions by gender from 1950 to 2023, and highlights significant dynamics in academic collaborations.
 
-Analysis of gender proportions in mixed collaborations (MF) from 1950 to 2023 reveals that in 1950, female authors represented an average of 37% of mixed teams, compared with 63% for male authors. This male dominance persisted until the 1960s. In the 1970s, the average proportion of female authors reached 48%, marking progress towards greater integration of women. From the 2000s onwards, the proportion of women authors continued to rise, although at just under 46%, reflecting a positive trend towards greater parity.
+Analysis of gender proportions in mixed collaborations (MF) from 1950 to 2023 reveals that in 1950, female authors represented an average of 37% of mixed teams, compared with 63% for male authors.
+This male dominance persisted until the 1960s.
+In the 1970s, the average proportion of female authors reached 48%, marking progress towards greater integration of women.
+From the 2000s onwards, the proportion of women authors continued to rise, although at just under 46%, reflecting a positive trend towards greater parity.
 
 The data thus show a gradual integration of women into mixed collaborations, indicating steady progress towards gender parity in academic research, despite the persistence of a slight male majority.
 
@@ -490,17 +509,24 @@ ggplot(annual_stats_by_category_nbarticles, aes(x = PY, y = nb_articles, color =
   scale_y_continuous(expand = expansion(mult = c(0, 0.05)))
 ```
 
-Analysis of data on the number of articles by gender category from 1950 to 2021 reveals some interesting, albeit nuanced, trends. In 1950, the "M" category (exclusively male) dominated, with 491 articles. The "F" (all-female) and "MF" (mixed) categories accounted for 27 and 12 items respectively.
+Analysis of data on the number of articles by gender category from 1950 to 2021 reveals some interesting, albeit nuanced, trends.
+In 1950, the "M" category (exclusively male) dominated, with 491 articles.
+The "F" (all-female) and "MF" (mixed) categories accounted for 27 and 12 items respectively.
 
-In subsequent years, trends changed significantly. For example, in 1960, although the "M" category remained dominant with 381 items, the "F" and "MM" categories showed an increase compared to 1950. However, missing data also began to appear more pronounced.
+In subsequent years, trends changed significantly.
+For example, in 1960, although the "M" category remained dominant with 381 items, the "F" and "MM" categories showed an increase compared to 1950.
+However, missing data also began to appear more pronounced.
 
-The 1970s mark a notable change, with a significant increase in the number of articles in all categories, including a notable rise in missing data. The "F" category began to show gradual growth, reaching 130 articles in 1970.
+The 1970s mark a notable change, with a significant increase in the number of articles in all categories, including a notable rise in missing data.
+The "F" category began to show gradual growth, reaching 130 articles in 1970.
 
-From the 2000s onwards, all categories see a marked increase in the number of articles, reflecting a global expansion of academic research. The "MF" (mixed collaboration) category grows particularly rapidly, peaking in 2021 with 16,267 articles, but missing data also increases drastically.
+From the 2000s onwards, all categories see a marked increase in the number of articles, reflecting a global expansion of academic research.
+The "MF" (mixed collaboration) category grows particularly rapidly, peaking in 2021 with 16,267 articles, but missing data also increases drastically.
 
-In conclusion, these data illustrate not only the quantitative expansion of scientific research over the decades, but also changes in the gendered composition of research teams, with a significant increase in mixed collaboration. However, it is crucial to take into account the impact of missing data, which can influence the interpretation of these upward trends.
+In conclusion, these data illustrate not only the quantitative expansion of scientific research over the decades, but also changes in the gendered composition of research teams, with a significant increase in mixed collaboration.
+However, it is crucial to take into account the impact of missing data, which can influence the interpretation of these upward trends.
 
-### Analysis of articles on climate change at an aggregate level 
+### Analysis of articles on climate change at an aggregate level
 
 ```{r, echo=FALSE, include=TRUE}
 # Calculer les statistiques descriptives pour chaque catégorie de la variable binaire "CC"
@@ -535,9 +561,11 @@ ggplot(stats_long, aes(x = factor(CC), y = Proportion, fill = Gender)) +
 
 Analysis of the data on articles relating to climate change, grouped according to the binary variable "CC" (climate change), reveals notable differences in the gendered composition of authors.
 
-Looking at the descriptive statistics, we see that in the category where the theme of climate change is central ("CC = 1"), the average proportion of female authors is slightly higher than in the "CC = 0" category. In detail, the average proportion of female authors is 28.29% in the "CC = 1" category, compared with 25.53% in the "CC = 0" category. On the other hand, the "CC = 0" category shows a greater predominance of male authors, with an average of 74.47%, compared to the "CC = 1" category where the average is 71.71%.
+Looking at the descriptive statistics, we see that in the category where the theme of climate change is central ("CC = 1"), the average proportion of female authors is slightly higher than in the "CC = 0" category.
+In detail, the average proportion of female authors is 28.29% in the "CC = 1" category, compared with 25.53% in the "CC = 0" category.
+On the other hand, the "CC = 0" category shows a greater predominance of male authors, with an average of 74.47%, compared to the "CC = 1" category where the average is 71.71%.
 
-These results highlight a distinct gendered distribution in climate change-related publications, with a predominance of male authors in both categories but more female authors in articles that focus on climate change, thus indicating varied dynamics in gender participation depending on the specific research theme. 
+These results highlight a distinct gendered distribution in climate change-related publications, with a predominance of male authors in both categories but more female authors in articles that focus on climate change, thus indicating varied dynamics in gender participation depending on the specific research theme.
 
 ### Climate change, category gender and number of articles
 
@@ -567,9 +595,12 @@ ggplot(stats_by_CC_category_gender, aes(x = factor(CC), y = proportion_articles,
 
 Analysis of the data on the number of articles relating to climate change, represented by the binary variable "CC" (climate change) and the gender category, reveals some interesting trends in the distribution of publications.
 
-Looking at the descriptive statistics, we observe a marked disparity in the number of articles published according to gender category and type of scientific research. In the "CC = 0" category (not focused on climate change), the distribution of articles by gender is significantly different from that observed in the "CC = 1" category (focused on climate change).
+Looking at the descriptive statistics, we observe a marked disparity in the number of articles published according to gender category and type of scientific research.
+In the "CC = 0" category (not focused on climate change), the distribution of articles by gender is significantly different from that observed in the "CC = 1" category (focused on climate change).
 
-For the "CC = 0" category, which does not deal specifically with climate change, the data show a significant predominance of articles attributed to the masculine (296,893 articles) and feminine (86,249 articles) genders, followed by mixed gender combinations (167,934 articles for MF, 188,404 articles for MM). In contrast, the "CC = 1" category shows lower overall articles numbers, with a similar trend of male predominance, but with a slightly higher proportion of items attributed to mixed gender combinations (8,310 articles for MF, 7,149 articles for MM). Analysis of the number of articles by genre category therefore reveals that, despite the lower overall quantity of articles in the "CC = 1" category, mixed-genre combinations account for a significant share compared with the other categories, underlining an increased diversity in scientific collaborations focused on climate change.
+For the "CC = 0" category, which does not deal specifically with climate change, the data show a significant predominance of articles attributed to the masculine (296,893 articles) and feminine (86,249 articles) genders, followed by mixed gender combinations (167,934 articles for MF, 188,404 articles for MM).
+In contrast, the "CC = 1" category shows lower overall articles numbers, with a similar trend of male predominance, but with a slightly higher proportion of items attributed to mixed gender combinations (8,310 articles for MF, 7,149 articles for MM).
+Analysis of the number of articles by genre category therefore reveals that, despite the lower overall quantity of articles in the "CC = 1" category, mixed-genre combinations account for a significant share compared with the other categories, underlining an increased diversity in scientific collaborations focused on climate change.
 
 ### Temporal evolution of the proportion of female authors by CC
 
@@ -595,8 +626,11 @@ ggplot(annual_stats_by_CC, aes(x = PY, y = Mean_Proportion_Female_Id, color = fa
   scale_y_continuous(limits = c(0, 1)) # Ajuster les limites de l'ordonnée pour aller de 0 à 1
 ```
 
-This section provides descriptive statistics and an analysis of the time trend in the proportion of authors identified as "women", for articles dealing with climate change ("CC" = 1) compared with articles not dealing with climate change (CC = 0). 
-Analysis of the results shows an upward trend in the proportion of women in both categories. For example, in 1983, the proportion of women authors was 13.5%, whereas it was 30.1% in 2017. For articles on climate change, the proportion was 0.4% in 1989, compared with 23% in 2023. The increase in the proportion of women is therefore more marked in climate economics research than in other types of economic research. 
+This section provides descriptive statistics and an analysis of the time trend in the proportion of authors identified as "women", for articles dealing with climate change ("CC" = 1) compared with articles not dealing with climate change (CC = 0).
+Analysis of the results shows an upward trend in the proportion of women in both categories.
+For example, in 1983, the proportion of women authors was 13.5%, whereas it was 30.1% in 2017.
+For articles on climate change, the proportion was 0.4% in 1989, compared with 23% in 2023.
+The increase in the proportion of women is therefore more marked in climate economics research than in other types of economic research.
 
 ###.Focus on Top5 and Top30 journals and on climte change
 
@@ -625,8 +659,10 @@ stats_by_top30journal_CC <- Corpus.CleanedNames.2 %>%
   )
 stats_by_top30journal_CC
 ```
+
 This section provides descriptive statistics on the proportion of women and men by journal type and research theme.
-For articles not related to climate change (CC = 0), the average proportion of female authors is higher in Top 30 journals (26.05%) than in Top 5 journals (14.26%). This suggests a more significant representation of female authors in the lower-quality newspapers for this type of article.
+For articles not related to climate change (CC = 0), the average proportion of female authors is higher in Top 30 journals (26.05%) than in Top 5 journals (14.26%).
+This suggests a more significant representation of female authors in the lower-quality newspapers for this type of article.
 
 On the other hand, for articles on climate change (CC = 1), although the trend is similar, with a higher average proportion of female authors in Top 30 (13.80%) compared to Top 5 (12.41%), the gap is less marked than for articles not related to climate change.
 
@@ -646,11 +682,561 @@ ggplot(Corpus.CleanedNames.2, aes(x = factor(Top30), y =proportion_gender_male_i
   facet_wrap(~ CC, scales = "free")
 ```
 
-### Conclusion 
+# Modèle économétrique de citations
 
-In conclusion, this study provides a comprehensive quantitative analysis of gender disparities within the field of climate economics, focusing on authorship dynamics across different levels of journal prestige and types of collaborations. Our findings underscore several key observations. While strides have been made towards gender equality in academic authorship, persistent disparities necessitate ongoing efforts to promote diversity and inclusivity in research collaborations and methodologies. Addressing these challenges is essential for advancing a more equitable and representative academic landscape in climate economics and beyond.
+Construire un modèle qui permet de déterminer s'il existe un effet de l'autorat féminin sur les citations des articles de recherches.
+Il est également possible de saisir le rôle du changement climatique (est-ce que les articles associés au changement climatiques sont plus cités que le reste des articles en économie?).
 
-Firstly, our data analysis reveals persistent gender imbalances in academic publishing, with a notable underrepresentation of female authors across all categories. While the average proportion of female authors is slightly higher in climate change-related articles compared to those not focused on climate change, both areas exhibit a predominantly male authorship landscape.
-Secondly, our study highlights the impact of collaboration types on gender representation. Mixed-gender collaborations (MF) demonstrate a more balanced distribution of authors, suggesting that fostering such collaborations could contribute to greater gender equity in academic research.
-Moreover, our analysis of temporal trends reveals a gradual increase in the proportion of female authors over the decades, indicating positive albeit slow progress towards gender parity in academic publishing. This trend is more pronounced in climate economics compared to broader economic research, reflecting evolving dynamics within specific research domains.
+(i) explorer les données de citations: plusieurs variables existent (regarder le dictionnaire de variables, je crois qu'il y en a au moins 3). Regarder le degré de corrélation entre toutes ces mesures de citation, regarder également les valeurs manquantes afin de choisir laquelle des variables de citation choisir.
+
+-   CR (Cited References) et NR (Cited References Count): ne son plus dans la base de données, pourtant il s'agit je pense de variables importantes
+
+-   TC : Web of Sciences Core Collection Times Cited Count.
+
+```{r}
+na_TC <- sum(is.na(Corpus.CleanedNames.2$TC))
+print(na_TC)
+```
+
+8020 valeurs manquantes sur 1 136 055 soit seulement 0.7%.
+
+-   Z9 : Total Times Cited Count
+
+```{r}
+na_Z9 <- sum(is.na(Corpus.CleanedNames.2$Z9))
+print(na_Z9)
+```
+
+460 866 valeurs manquantes sur 1 136 055 soit 40.5%
+
+-   U1 et U2 peuvent être des variables intéressantes mais je ne comprends pas vraiment à quoi elles font référence.U2 citations entre 2013 et 2023
+
+```{r}
+na_U1 <- sum(is.na(Corpus.CleanedNames.2$U1))
+print(na_U1)
+```
+
+460 865 valeurs manquantes sur 1 136 055 soit 40.5%
+
+```{r}
+na_U2 <- sum(is.na(Corpus.CleanedNames.2$U2))
+print(na_U2)
+```
+
+460866 valeurs manquantes sur 1 136 055 soit 40.5%
+
+Mêmes chiffres pour U1,U2 et Z9 donc il s'agit peut-être des mêmes articles à chaque fois dont les valeurs sont manquantes pour ces 3 variables.
+TC semble être la meilleure variable à utiliser étant donné son faible nombre de donnnées manquantes.
+
+(ii) Lire les deux articles déposés sur la dropbox ([cliquer ici pour le lien](https://www.dropbox.com/scl/fo/jxx20i4cdgd4xnfhfm0na/ADxj_2rn9GVec03RiifhawA?rlkey=p8ps1t61v9jo9kan339uyv94c&dl=0)). L'article de Nature est très descriptif et possiblement en décalage (la question des premiers auteurs ne se posent pas en économie, car l'ordre des auteurs est quasi systématiquement l'ordre alphabétique). L'article dans la revue de sciences sociale est vraiment pas mal pour situer la question, et voir une approche (l'article fait aussi une bonne revue de litté qui peut être utile si tu cherches d'autres méthodes/références pour t'inspirer).
+
+### Global gender disparities in science (R. Sugimoto) = global and cross-disciplinary analysis of gender inequalties in research output
+
+##### Constats:
+
+-   Differences in productivity: men publish more papers than women, especially in areas in which research is expensive.
+-   Citations: Women are more cited especially in fields with greater career risks such as ecology.
+
+##### Methodology:
+
+-   Analysis of the relationship between gender and research output (proxy = authorship on published papers);
+
+-   Analysis of the extent of collaboration (proxy = co-authorships);
+
+-   Analysis of **scientific impact** of articles published between 2008 and 2012 indexed in Web of Science databases (**proxy = citations**).
+
+-   Observations: 5,483,841 research papers and review articles with 27,329,915 authorships.
+
+-   Gender assignment: using data from the US Social Security database
+
+-   Proportion of each gender's output by comparing the proportion of identified authorships for each gender on any given paper.These gendered fractions were then aggregated at the levels of countries and disciplines.
+
+##### Results:
+
+-   Women account for fewer than 30% of fractionalized authorships.
+
+-   Geographical disparities: research output is dominated by male authors in nearly every country.
+    Communists states have greater gender parity.
+    Countries with lower research output concentrate female dominance.
+    South American and Eastern European countries demonstrate greater gender parity.
+
+-   In the most productive countries, all articles with women in dominant author positions receive fewer citations than those with men in the same positions
+
+-   Women profit less from the extra citations that international collaborations accrue.
+
+-   Women publish more in fields related to "care" whereas men publish more in fields related to economics or high-energy physics.
+
+-   Collaboration: Women are less likely to participate in collaborations that lead to publication as well as international collaborations: female collaborations are more domestically oriented than are the collaborations of males from the same country.
+
+##### Limits
+
+-   Age which could play a crucial role in explaining gender differences in scientific output
+
+-   The analysis of first authors insofar as authors are listed alphabetically.
+
+### A rare case of Gender Parity in Academia (B.Lynn, C.Noonan, M.Sauder)
+
+**Context:** The study explores the gender gap in academic citations, focusing on the reasons behind the *absence of a significant gender gap in this specific context* **and** controlling for citations predictors.\
+
+Citation information has played an increasingly explicit role in the way that scholars and administrative bodies measure "research achievement" + the fact of attracting their peers.
+
+**Analysis:** Estimate the effect of author gender on citations.Questions:
+
+-   To what extent do female- and male-led publications exhibit similar characteristics in terms of citation predictors?
+
+-   Do comparable male- and female-led publications attract a comparable number of citations?
+
+-   How important is author gender overall relative to other citation predictors?
+
+Reasons of this analysis:
+
+-   Gender could be significantly correlated with one of the abovementioned citation predictors, such as producer expertize, authority, or visibility.
+
+-   Audience could discriminate directly on the basis on author gender when allocating citations, in which case author gender would predict citation counts even if publications were otherwise comparable
+
+##### Other interesting bibliography
+
+Aksnes et al. (2011) - Research area = Biology and environmental sciences.
+Results = Female penalty
+
+##### Methodology
+
+**Data Sample**: Analysis of approximately 10,000 publications across economics, political science, sociology and regional journals.
+
+**Citation counts** = number of citations accruing to each focal article (as indexed by WoS) from the publication date through December 2013.
+Citation trajectories thus range from 10 to 30 years, depending on when the article was published.\
+
+Sales-Pardo, and Amaral (2010) argue that for the vast majority of journals, publications generally accumulate the bulk of their citations within roughly ten years of publication.
+They thus recommend that citation studies focus on publication cohorts that are **at least a decade old**.
+
+**Citation predictors**
+
+The nu**mber of citations can be shaped by characteristics** = **citation predictors : the product (the article,** **the** **journal), the producers (the popularity** **of** **authors,** **marketing), market** **size** **and the *audience* (scholarly peers, the field /** discrimination)\
+
+-   Market size proxies:
+
+    First proxy = subfields = they classify each referenced journal by its field according to Journal Citation Reports (JCR).\
+
+    Second proxy = the "uniqueness" of the work cited in the focal article regarding the sources cited.
+    They expect that this variable is negatively correlated with total citation counts, as too many unconventional sources could indicate that the article (a) focuses on a non-conventional topic (and thus has a smaller audience) or (b) is perceived by the audience as unpersuasive.
+
+-   Producer Expertize, Authority and Visibility\
+    Median publication year of all references: negatively correlated with citations received
+
+    Proportion of References to Unpublished Sources in the Focal Article divided by the total number of references: positively correlated with citations received
+
+    Focal Author(s) Institutional Prestige: author's institutional affiliation at the time of publication matched with the 1990 National Research Council's departmental prestige rankings: positively correlated with citations received.
+
+    Focal Author(s) Flagship Journal Appearances: the number of times a researcher publishes in his/her discipline's top journals is used as a proxy for scholarly visibility and expertize: positively correlated with citations received.
+
+    Presence of Self-Citation: proxy for self-promotion.
+    Self-citation is measured as the presence of at least one self-citation in the focal article.
+
+-   Control Variables: article type, articles are either single or multipled authors, number of pages and number of references
+
+##### Results:
+
+-   OLS results = no significant gender gap in terms of the **number** of logged citations.
+    When male and female authors publish articles that are comparably positioned to receive citations, their publications accrue citations at the same rate.
+
+-   Results of predictors: the estimated effects of the other citation predictors are generally in the expected direction
+
+-   It highlights two mechanisms: commitment bias and self-selection, which are often activated in other professional outcomes but seem irrelevant or muted in the case of citations.
+
+iii) Il va falloir ensuite faire des modèles économétriques et diagnostiquer les résultats. Il ya plusieurs points qui vont être problématique: beaucoup d'articles avec 0 citation, beaucoup de journaux avec peu d'articles. Une solution possible est de ne garder qu'un sous échantillon de journaux stable sur tout l'échantillon. Il y aura alors des allers retours récurrents entre une spécification économétrique, une interprétation de résultat, puis une modification de l'échantillon ou du modèle pour aboutir à quelques choses qui semble satisfaisant.
+
+L'idée est de viser un modèle de ce type:
+
+\$C\_{i,j,t} = \alpha\_0 + \delta\_j + \mu\_t + \beta F_i + \gamma\*1\* \times NAUTH{i} + \gamma\*k X_k +\* \varepsilon{i,j,t} \$
+
+\- $C_{i,j,t}$ sont les citations reçues par l'article i publié dans le journal $j$ à l'année $t$ = TC
+
+-alpha_0 = constante\
+- $\delta_j$ un effet fixe journal = TI
+
+\- $\mu_t$ un effet fixe année (sinon, possible d'estimer sans effet fixe année, mais en mesurant les citations divisés par l'âge de l'article = une mesure du nombre moyen de citations reçues par l'article chaque année depuis sa publication) = PY
+
+\- $F_i$ la variable mesurant la part d'autorat féminin (ou bien à combiner avec n'importe quel autre variable d'intérêt, les articles qui traitent du changement climatique, les différentes combinaisons de genre de collaborations) = proportion_gender_female_id / CC
+
+\- puis intégrer des variables de contrôle = nombre de journaux = PG / nombre auteurs = nb_authors
+
+-\> ne pas s'inquiéter si les résultats ne sont pas significatifs.
+D'après un rapide regard, cela semble normal d'après la littérature de ne pas remarquer une différence moyenne de citation selon le genre.
+L'idée est surtout de tester différents modèles et de les comparer.
+
+Une ressource possiblement utile: Le cours d'économétrie de Sciences Po en ligne(cliquer ici)\[https://scpoecon.github.io/ScPoEconometrics/panel-data.html\].
+Avec pas mal de commandes de base sur R, il est plutot bien fait pour s'introduire à l'économétrie.
+JE pense que c'est une bonne première base.
+Si tu veux aller plus loin, dis moi et je peux te filer d'autres manuels ou supports.
+Tu peux essayer d'appliquer leur exercice d'analyse du crime dans les comtés américains par année.
+Ici nous c'est l'analyse du genre dans les journaux d'économie et par année.
+Je pense qu'il faut voir le journal/la revue comme l'équivalent du comté, et ensuite chaque article est comme un crime (avec dans notre cas des caractéristiques dont on cherche à évaluer le rôle: dont notamment le genre des auteurs.) Les modèles que l'on cherche à faire sont ceux de la "dummy variable regression" ou aussi de la "within transformation" (sur le site web).
+Qui sont deux approches parfaitement équivalentes (eles donnent les mêmes coefficient pour le $\beta$ associé à la variable F).
+
+```{r}
+library(dplyr)
+library(lmtest)
+```
+
+```{r}
+# Prendre les 6000 premières lignes des données
+sample_data <- Corpus.CleanedNames.2 %>% slice(1:6000)
+```
+
+Effet fixe en facteurs
+
+```{r}
+sample_data <- sample_data %>%
+  mutate(PY = as.factor(PY),    # Effet fixe année
+         SO = as.factor(SO))  # Effet fixe journal
+```
+
+```{r}
+Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>%
+  mutate(PY = as.factor(PY),    # Effet fixe année=PY
+         SO = as.factor(SO))  # Effet fixe journal=SO
+```
+
+```{r}
+levels_count1 <- sample_data %>%
+  summarise(PY_levels = n_distinct(TI),
+            SO_levels = n_distinct(SO))
+
+print(levels_count1)
+```
+
+```{r}
+levels_count <- Corpus.CleanedNames.2 %>%
+  summarise(PY_levels = n_distinct(PY),
+            SO_levels = n_distinct(SO))
+
+print(levels_count)
+```
+
+75 années différentes et 10 127 journaux différents.
+
+Citations et nombre de pages en numérique
+
+```{r}
+sample_data$PG <- as.numeric(sample_data$PG)
+sample_data$TC <- as.numeric(sample_data$TC)
+```
+
+```{r}
+Corpus.CleanedNames.2$PG <- as.numeric(Corpus.CleanedNames.2$PG)
+Corpus.CleanedNames.2$TC <- as.numeric(Corpus.CleanedNames.2$TC)
+```
+
+Régression des citations sur l'effet fixe année, l'effet fixe journal, la proportion d'auteurs identifiées comme femme, avec comme variables de contrôle le nombre d'auteurs et de page par article
+
+```{r}
+model_1 <- lm(TC ~ SO + PY + proportion_gender_female_id + PG + nb_authors, data = sample_data)
+```
+
+```{r}
+#model1 <- lm(TC ~ SO + PY + proportion_gender_female_id + PG + nb_authors, data = Corpus.CleanedNames.2)
+#Erreur : vecteurs de mémoire épuisés (limite atteinte ?)
+```
+
+```{r}
+summary(model_1)
+```
+
+Interprétation coefficients:
+- Proportion de Femmes parmi les Auteurs (Estimate = 3.09736, SE = 0.77091)
+La proportion de femmes parmi les auteurs a un effet positif et significatif sur le nombre de citations. Une augmentation de 1 unité dans la proportion de femmes est associée à une augmentation de 3.10 citations (p < 0.001)
+- Nombre de Pages par Article (Estimate = 0.01771, SE = 0.01248)
+Le nombre de pages par article a un effet positif mais non significatif sur le nombre de citations (p > 0.05). Chaque page supplémentaire est associée à une augmentation de 0.018 citations.
+- Nombre d'Auteurs par Article (Estimate = 0.79084, SE = 0.23708)
+Le nombre d'auteurs a un effet positif et significatif sur le nombre de citations (p < 0.01). Chaque auteur supplémentaire est associé à une augmentation de 0.79 citations.
+
+### Dummy Variable Regression
+
+```{r}
+model = list()
+model$dummy <- lm(TC ~ proportion_gender_female_id + PG + nb_authors + factor(SO)+ factor(PY), data = sample_data)
+```
+
+```{r}
+summary(model$dummy)
+```
+
+Interprétation coefficients = très similaire à la régression précédente:
+- Proportion de Femmes parmi les Auteurs:Estimate: 3.0974/Std. Error: 0.7709
+Très significatif (p < 0.001). Cela suggère qu'une augmentation de la proportion d'auteurs féminins identifiés est associée à une augmentation du nombre de citations de l'article.Pour chaque augmentation de 1 unité (ou 100%) dans la proportion d'auteurs identifiés comme femme, le nombre de citations (TC) augmente en moyenne de 3.0974 citations.
+- Nombre de Pages par Article.Estimate: 0.0177/Std. Error: 0.0125
+Pour chaque page supplémentaire, le nombre de citations (TC) augmente en moyenne de 0.0177 citations. Cependant, cette relation n'est pas statistiquement significative.
+- Nombre d'Auteurs par Article:Estimate: 0.7908/Std. Error: 0.2371
+Très significatif (p < 0.001). Cela suggère qu'un nombre plus élevé d'auteurs est associé à un nombre plus élevé de citations de l'article.Pour chaque auteur supplémentaire, le nombre de citations (TC) augmente en moyenne de 0.7908 citations.
+
+### The Within Transformation
+
+```{r}
+sample_data2 <- sample_data %>%
+  group_by(SO) %>%
+  mutate(mean_TC = mean(TC),
+         mean_prop = mean(proportion_gender_female_id),
+         mean_PG = mean(PG),
+         mean_nb_authors = mean(nb_authors)) %>%
+  mutate(demeaned_TC = TC - mean_TC,
+         demeaned_prop = proportion_gender_female_id - mean_prop,
+         demeaned_PG = PG - mean_PG,
+         demeaned_nb_authors = nb_authors - mean_nb_authors)
+```
+
+```{r}
+model$xsect <- lm(TC ~ proportion_gender_female_id + PG + nb_authors, data = sample_data2)
+model$demeaned <- lm(demeaned_TC ~ demeaned_prop + demeaned_PG + demeaned_nb_authors, data = sample_data2)
+```
+
+```{r}
+summary(model$xsect)
+```
+
+proportion_gender_female_id : Le coefficient estimé est positif mais non significatif = 0.23555 avec un écart type de 0.84075 donc la proportion d'auteurs identifiés comme femmes a un effet significatif sur le nombre de citations.
+
+PG (nombre de pages) : Le coefficient est de 0.03115 avec un écart type de 0.01327. Ce coefficient est significatif au niveau de 5% (p = 0.0189) donc une augmentation du nombre de pages est associée à une augmentation du nombre de citations.
+
+nb_authors (nombre d'auteurs) : Le coefficient est de -0.59259 avec un écart type de 0.24722. Ce coefficient est significatif au niveau de 5% (p = 0.0166) donc une augmentation du nombre d'auteurs est associée à une légère diminution du nombre de citations.
+
+```{r}
+summary(model$demeaned)
+```
+
+Aucun résultat significatif
+
+### Nouvelle méthode: plm
+
+```{r}
+library(plm)
+```
+
+
+```{r}
+incomplete_rows <- is.na(sample_data$PY)
+sample_data_clean <- sample_data[!incomplete_rows, ]
+```
+
+Transformer sample_data en un objet `panel data frame`
+
+```{r}
+# Transformons data 1 en un objet `panel data frame`
+sample_data_panel <- pdata.frame(sample_data_clean, index = c("SO", "PY"))# index spécifie la structure de panel de nos données: elles sont indicées par journaux avec la variable SO, et par le temps avec la variable PY
+
+# Jetons un oeil à l'objet:
+pdim(sample_data_panel)
+head(index(sample_data_panel))
+```
+
+Effectuons la régression à l'aide de la commande plm, sans effet fixe
+
+```{r}
+model_plm = plm(formula = TC ~ proportion_gender_female_id + PG + nb_authors, # Formule du modèle estimé 
+                       data = sample_data_panel, 
+                       model = "within")
+coef(model_plm) # résumé des beta_chapeau
+head(fixef(model_plm))
+```
+
+```{r}
+model_lsdv = lm(formula = TC ~ proportion_gender_female_id + PG + nb_authors + factor(PY) + factor(SO),
+                    data = sample_data) # commande lm: on précise le modèle que l'on estime. En incorporant factor(fips) on force lm à comprendre les modalités de la variables fips comme étant chacune une variable binaire dans le modèle (moyen rapide d'incorporer des variables binaires). 
+head(coef(model_lsdv)) # Pour seulement obtenir les coefficients estimés par les MCO
+
+# summary(est_model_lsdv) # Pour avoir le résumé entier de la régression (mais très long)
+```
+
+Les coefficients et même le signe des coefficients n'est pas le même suivant les deux méthodes...
+
+## Analyse par pays
+
+Nous avons la colonne des affiliations d'auteur C1.
+Cette colonne a différents formats possibles, elle dit pour chaque auteur son (ses) affiliations (un auteur peut avoir plusieurs affiliations, et deux auteurs peuvent avoir la même affiliation).
+L'objectif est donc de créer des variables qui retournent tous les pays cités dans cette colonne C1 et qui viendrait alors caractériser l'origine géographique de l'article.
+Par étapes: 1.
+Avoir un vecteur qui contient tous les noms de pays du monde.
+2.
+Construire une commande qui regarde dans chaque élément de C1 quels pays apparaissent et retourne chacun de ces pays.
+3.
+Puis faire des variables pour tous les pays cités par article (comme le nombre d'auteurs, on peut s'arréter à max 10 pays).
+
+```{r}
+library(countries)
+country_list <- as.vector(countries::country_reference_list$simple)
+country_list
+```
+
+```{r}
+extract_countries <- function(data, country_list) #Fonction intitulée "extract_countries" qui prend comme argument la base de données et le vecteur qui contient la liste des pays du monde
+  
+  {
+  result_matrix <- matrix(nrow = nrow(data), ncol = 10, 
+                          dimnames = list(NULL, paste0("country_", 1:10)))
+  #création d'une matrice vide dont le nombre de lignes correspond au nombre de lignes de la dataframe et dont le nombre de colonnes correspond au 10 pays representés par les colonnes "country_1" à "country_10". La commande dimnames spécifie le nom des lignes (pas de noms spécifiques =NULL) et le nom des colonnes
+  
+  # Loop through each entry in C1 column
+  
+  for (i in seq_along(data$C1)) 
+    
+    {
+    
+    potential_countries <- regmatches(data$C1[i], gregexpr("(?<=, )\\w+(?=(, |;|$))", data$C1[i], perl=TRUE))[[1]]
+  
+    
+#regmatches() est utilisé pour extraire les parties de data$C1[i] qui correspondent à l'expression régulière spécifiée par gregexpr().
+#gregexpr() recherche une expression régulière dans une chaîne de caractères donnée et retourne les positions des correspondances trouvées.
+#"(?<=, )\\w+(?=(, |;|$)) = séquences de caractères alphanumériques qui suivent une virgule et un espace, mais qui précèdent soit une virgule suivie d'un espace, un point-virgule ou la fin de la chaîne
+    
+    # Initialize counter for extracted countries
+    country_counter <- 1
+    
+    # Loop through potential countries
+    for (country in potential_countries) {
+      # Check if the extracted country is in country_list
+      if (country %in% country_list) {
+        # Store the country in the result matrix
+        result_matrix[i, country_counter] <- country
+        country_counter <- country_counter + 1
+        # Break if we've found 10 countries for this entry
+        if (country_counter > 10) break
+      }
+    }
+  }
+  
+  # Convert result_matrix to data frame and bind to original data
+  result_df <- as.data.frame(result_matrix)
+  data <- cbind(data, result_df)
+  
+  return(data)
+}
+```
+
+```{r}
+sample_data_with_countries <- extract_countries(sample_data, country_list)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+#sample_data_processed <- sample_data %>%
+  #separate_wider_delim(
+    #col = C1,
+    #into = paste0("country_", 1:10), 
+    #sep = "; ",
+    #extra = "merge",
+    #token = ", "
+  #)
+```
+
+
+Que faire en suite?
+1.
+Décrire les données: part des articles/auteurs provenant de chaque pays du monde
+```{r}
+# Calculer la part des articles par pays
+country_counts <- table(stack(sample_data_with_countries[, grep("^country_", colnames(sample_data_with_countries))]))
+
+total_country_counts<-rowSums(country_counts)
+print(total_country_counts)
+```
+
+Au total il y a 101 auteurs qui viennent d'Albanie
+
+```{r}
+all_authors_incorpus <- unlist(sample_data_with_countries[, grepl("^fullname_", colnames(sample_data_with_countries))]) %>% 
+  unique() # Vecteur qui contient tous les prénoms différents dans le corpus
+length(all_authors_incorpus)
+```
+
+Au total il y a 11 240 auteurs uniques
+
+```{r}
+# Diviser chaque valeur de total_country_counts par le nombre d'auteurs uniques
+normalized_country_counts <- total_country_counts / length(all_authors_incorpus)
+
+# Formater les résultats pour les rendre plus lisibles
+formatted_counts <- format(normalized_country_counts, digits = 3, scientific = FALSE)
+
+print(formatted_counts)
+```
+
+```{r}
+df_country_counts <- data.frame(
+  Country = names(formatted_counts),
+  Count = as.numeric(formatted_counts)
+)
+
+# Création du graphique
+ggplot(df_country_counts, aes(x = Country, y = Count)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Normalized Country Counts",
+       x = "Country",
+       y = "Normalized Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+# Définition des colonnes de pays
+country_columns <- grep("^country_", colnames(sample_data_with_countries), value = TRUE)
+
+# Fonction pour compter les occurrences de chaque pays par article
+count_country_occurrences <- function(data, country_columns) {
+  # Fonction interne pour compter les occurrences par article
+  count_countries_in_article <- function(article_countries) {
+    # Compter les occurrences de chaque pays
+    counts <- table(unlist(article_countries))
+    return(counts)
+  }
+  
+  # Créer une nouvelle colonne pour les comptages de pays par article
+  data$country_counts <- apply(data[, country_columns], 1, count_countries_in_article)
+  
+  return(data)
+}
+
+# Appeler la fonction pour mettre à jour les données avec les comptages par pays
+sample_data_with_countries <- count_country_occurrences(sample_data_with_countries, country_columns)
+```
+
+```{r}
+# Remplacer les valeurs "integer(0)" par NA dans la colonne C1
+# Remplacer les valeurs integer(0) par NA dans la colonne C1
+sample_data_with_countries$country_counts <- lapply(sample_data_with_countries$country_counts, function(x) {
+  if (length(x) == 0) {
+    return(NA)
+  } else {
+    return(x)
+  }
+})
+
+# Convertir la liste en vecteur de caractères si nécessaire
+sample_data_with_countries$country_counts <- unlist(sample_data_with_countries$country_counts)
+```
+
+
+
+ou provenant de certaines régions du monde (US, vs EU, vs Reste du monde), évolution de ces parts par année.
+PArt de l'origine géographique des auteurs selon les types de journaux.
+Possible également de croiser genre et origine géographique.
+Beaucoup de libertés ici dans la visualisation des données et l'interprétation 2.
+Possible de faire des cartes pour visualiser les résultats (intensité des couleurs reflète la part d'articles provenant d'un pays/région).
+3.
+Construire des donées de panel qui contiennent pour chaque pays-année: le nombre d'articles traitant du changement climatique, puis un ensemble de variables économiques (PIB, part de budget public dans la recherche), et de variables indiquant l'exposition/l'implication face au changement climatique (émissions annuelles de GES, la mise en oeuvre d epolitique de réduction d'émissions, les possibles dégats futurs du changement climatique)... L'idée serait ensuite d'explorer les corrélations entre l'effort de recherche au sujet du changement climatique et ces variables.
+
+### Conclusion
+
+In conclusion, this study provides a comprehensive quantitative analysis of gender disparities within the field of climate economics, focusing on authorship dynamics across different levels of journal prestige and types of collaborations.
+Our findings underscore several key observations.
+While strides have been made towards gender equality in academic authorship, persistent disparities necessitate ongoing efforts to promote diversity and inclusivity in research collaborations and methodologies.
+Addressing these challenges is essential for advancing a more equitable and representative academic landscape in climate economics and beyond.
+
+Firstly, our data analysis reveals persistent gender imbalances in academic publishing, with a notable underrepresentation of female authors across all categories.
+While the average proportion of female authors is slightly higher in climate change-related articles compared to those not focused on climate change, both areas exhibit a predominantly male authorship landscape.
+Secondly, our study highlights the impact of collaboration types on gender representation.
+Mixed-gender collaborations (MF) demonstrate a more balanced distribution of authors, suggesting that fostering such collaborations could contribute to greater gender equity in academic research.
+Moreover, our analysis of temporal trends reveals a gradual increase in the proportion of female authors over the decades, indicating positive albeit slow progress towards gender parity in academic publishing.
+This trend is more pronounced in climate economics compared to broader economic research, reflecting evolving dynamics within specific research domains.
 However, our study also identifies significant challenges in gender assignment methodologies, particularly in handling non-Western names, which remain a crucial limitation affecting the accuracy and inclusivity of gender analyses in academic research.
