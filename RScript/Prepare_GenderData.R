@@ -200,7 +200,7 @@ gender_proba_df <- gender_proba_ssa_df_2 %>%
 
 # Final object:
 names_proba_df <- gender_proba_df  # All first names that for which we have an assigned gender probability
-
+length(unique(names_proba_df$name))
 # 5. Associate gender to all authors (gender algorithm) ----------------------------------------
 
 # Load data of top 10% male economists, top 10% female economists and common chinese names
