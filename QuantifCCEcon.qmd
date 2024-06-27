@@ -2,7 +2,7 @@
 title: Quantifying interactions between economics of climate change, the rest of economics
   and other disciplines
 author: ''
-date: "`r format(Sys.time(), '%d/%m/%y')`"
+date: today
 output:
   pdf_document: default
   html_document:
@@ -51,41 +51,81 @@ Corpus.CleanedNames <- Corpus.CleanedNames.2
 
 ## Introduction
 
-Gender disparities in scientific research remain a pressing issue, with significant impacts on the balanced development of the field.
-In particular, gender role positioning and educational restrictions continue to hinder equitable progress in scientific research.
-This study aims to provide a quantitative analysis of these gender disparities *within the specific context of climate economics*, considering various levels of journal prestige and types of collaborations.
+Gender disparities in scientific research remain a pressing issue, with
+significant impacts on the balanced development of the field. In particular,
+gender role positioning and educational restrictions continue to hinder
+equitable progress in scientific research. This study aims to provide a
+quantitative analysis of these gender disparities *in economics, with a specific
+focus on climate change economics*. The analysis aims at illustrating the gender
+gap in authorship in economics, by documenting its evolution through years and
+between journals.
 
-Previous research has delved into the broader issue of gender disparities in economics.
-For instance, David Card, Stefano Della Vigna, Patricia Funk, and Nagore Iriberri (2019), in their paper "Are Referees and Editors in Economics Gender Neutral?", examined the role of gender in the evaluation of economic research.
-They highlighted that editorial process is not gender-neutral when considering differences in paper quality and field: female-authored papers get more citations than male-authored papers.
-It shows that female researchers have characteristics that lead to higher citations, especially differences in empirical content but are held to a higher standard, perhaps because of stereotype biases.
+Previous research has shown a dominance of male authors in quantity of articles
+and influence.  Junwan Liu, Yinglu Song, and Sai Yang (2019), in their paper
+"Gender Disparities in the Field of Economics," brings evidence of gender
+disparities in economics, while studying their disparities across countries,
+institutions, and journal levels. Their findings indicate geographical
+variations, and also revealed that the number of articles of both male and
+female authors decreases logarithmically with career age, while the influence of
+female authors tends to increase with longer careers due to higher
+qualifications.
 
-Similarly, Junwan Liu, Yinglu Song, and Sai Yang (2019), in their paper "Gender Disparities in the Field of Economics," analyzed gender disparities in terms of research output and influence across different countries, institutions, and journal levels.
-Their findings indicate a dominance of male authors in terms of research output and influence, with significant geographical variations.
-Their study also revealed that the output of both male and female authors decreases logarithmically with career age, while the influence of female authors tends to increase with longer careers due to higher qualifications.
+Evidence also suggest that the publication process in economics is not gender
+neutral. For instance, David Card, Stefano Della Vigna, Patricia Funk, and
+Nagore Iriberri (2019), in their paper "Are Referees and Editors in Economics
+Gender Neutral?", examined the role of gender in the evaluation of economic
+articles by referees and editors. They don't find any effect of gender on the
+referee assessment. However, they highlight that female-authored papers get more
+citations than male-authored papers when considering differences in paper
+quality and field. Their main explanation is that referees impose higher
+standards to women authored articles.
 
-Building on these foundational studies, our research utilizes a larger and more diverse data set, drawing from the Web of Science database and Scopus, which includes information on over 600,000 articles.
-Our analysis focuses on climate economics, aiming to uncover gender disparities by examining differences across journal levels and collaboration types.
-Specifically, we categorize journals into top five and top thirty tiers and analyze the degree of mixed-gender collaborations within these articles.
-Our objective is to validate and extend previous findings within the niche of climate economics, thereby contributing to the understanding of gender inequalities in this crucial area of research.
+Our research complements this literature using a larger bibliographic dataset,
+drawing from Web of Science and Scopus bibliographic databases, which includes
+information on more than 1.1 million articles published between 1950 and 2022 in
+peer-reviewed economic journals. Our analysis then distinguish articles focusing
+on climate-related issues and the rest of articles in economics. We aim at
+uncovering whether gender disparities between climate change economics and the
+rest of the economic literature is substantial. We also account for differences
+across journal levels and collaboration types. <!-- Specifically, we categorize
+journals into top five and top thirty tiers and analyze the degree of
+mixed-gender collaborations within these articles. --> Our objective is to
+validate and extend previous findings within the niche of climate economics,
+thereby contributing to the understanding of gender inequalities in this crucial
+area of research.
 
 ## Data cleaning and gender assignment algorithm
 
-To accurately assess gender disparities in scientific research, a rigorous data cleaning and gender assignment process is essential.
-This section outlines the methodology employed to clean the data set and assign gender probabilities to authors' first names.
+To accurately assess gender disparities in scientific research, we start by
+documenting our data preparation process to <!-- obtain the gender of authors of
+each articles. a rigorous data cleaning and gender assignment process is
+essential. --> <!-- This section outlines the methodology employed to clean the
+data set and assign gender probabilities to authors' first names. -->
 
-#### Data Cleaning Process
+### Data Preparation
 
-Initially, we considered a sample of 60,000 observations, focusing on articles with 15 authors or fewer, which constitute 99.95% of the data set.
-For each article, we extracted in our initial data base all authors' full names, names and first names.
-The cleaning process aimed to ensure compatibility with the "gender" package in R and involved several steps.
-We applied this cleaning for full names, first and last names.
-We first removed text in brackets, extraneous spaces, in particular those at the beginning and end of names and any letters followed by a period.
-In handling compound names, we retained only the first name.
-Finally, we replaced all accents with their unaccented equivalents.
-These steps ensured that the first names were in a suitable format for gender identification.
+From our corpus of articles from Web of Science and Scopus published in
+peer-reviewed journals in English (about 1.2 million articles), we restrict our
+sample to articles with at maximum 15 authors, which constitute 99.95% of the
+data set. For each article, we extracted in our initial data base all authors'
+full names, names and first names. The first stage of the cleaning process aimed
+to homogeneize the character encoding. This step ensures that author full names
+and first name has the same character encoding as the list of authors full
+names, and the list of first name, that we use to identify gender. The
+homogeneization of the character encoding means that for instance we removed
+accentuated character. While homogeneizing character encoding, we also removed
+other information in the authors variable provided by Scopus and Web of Science,
+such as their ORCID or Scopus ID. This requires to remove text in brackets,
+extraneous spaces, in particular those at the beginning and end of names and any
+letters followed by a period. Also, when creating our first name variable for
+authors, we removed isolated/single letters (i.e., we removed the the middle
+names of authors), and we only kept the first name when authors had compound
+names, as our list of first names used for gender identification does not
+contain any compound name. This list is provided by the `gender` package in R.
+Altogether, these steps ensure that authors' full names and first names are in a
+suitable format for gender identification.
 
-#### Gender Assignment Algorithm
+### Algorithm to identify author's gender
 
 After cleaning the data, we utilized the "gender" package in R to associate a gender and gender probabilities to any first name.
 To do so, we first create functions that compute gender probability for a given first name employing two methods: the "ssa" method, which uses data from the US Census List, and the "napp" method, which reallocates gender probabilities for names not identified by the "ssa" method.
