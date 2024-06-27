@@ -1260,16 +1260,16 @@ sample_data_with_countries <- count_country_occurrences(sample_data_with_countri
 ```{r}
 # Remplacer les valeurs "integer(0)" par NA dans la colonne C1
 # Remplacer les valeurs integer(0) par NA dans la colonne C1
-sample_data_with_countries$country_counts <- lapply(sample_data_with_countries$country_counts, function(x) {
-  if (length(x) == 0) {
-    return(NA)
-  } else {
-    return(x)
-  }
-})
+# sample_data_with_countries$country_counts <- lapply(sample_data_with_countries$country_counts, function(x) {
+#   if (length(x) == 0) {
+#     return(NA)
+#   } else {
+#     return(x)
+#   }
+# })
 
 # Convertir la liste en vecteur de caractères si nécessaire
-sample_data_with_countries$country_counts <- unlist(sample_data_with_countries$country_counts)
+# sample_data_with_countries$country_counts <- unlist(sample_data_with_countries$country_counts)
 ```
 
 
