@@ -1,14 +1,21 @@
 ---
-title: "Quantifying interactions between economics of climate change, the rest of economics and other disciplines"
-author: ""
+title: Quantifying interactions between economics of climate change, the rest of economics
+  and other disciplines
+author: ''
 date: "`r format(Sys.time(), '%d/%m/%y')`"
-output: html_document
+output:
+  html_document: 
+    css: styles.css
+    keep_md: true
+  pdf_document: default
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
 
 ```{r setup, include=FALSE}
 # Clean memory 
@@ -17,7 +24,7 @@ gc()
 
 # Load package
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere)
+pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere, stringr, gender, genderdata, stringi, dplyr, tidyr, genderizeR)
 
 # List directories 
 dir <- list()
@@ -28,40 +35,1077 @@ dir$raw.data <- here(dir$root, "Raw_data")
 dir$prep.data <- here(dir$root, "Prepared_data")
 # Create non existing directories
 lapply(dir, function(i) dir.create(i, recursive = T, showWarnings = F))
-
-
 ```
 
-# Preliminary data analysis
+## Preliminary data analysis
 
-## Authorship data: gender and affiliation
-Affiliation data `C1`and `RP` variables. We'd like to identify each countries in which authors of the articles are affiliated. Thus, we'd like to create a variable "country" which list each country referenced in the `C1`and `RP`variables. 
-
-You can focus on climate related articles
+## I. Authorship data: gender
 
 ```{r}
-### First load data:
-load(here(dir$prep.data,"Corpus_Short.Rdata"))
+# First load data: Corpus_Short
+load(here(dir$prep.data, "GenderedAuthors_Data.Rdata"))
+
+#10% of the original data : Corupus.Short.Small
+Corpus.Short.Small <- Corpus.CleanedNames.2
+Corpus.Short <- Corpus.CleanedNames.2
+```
+
+### Step 1: Creation of new columns for each author and for each article
+
+Separation of the column "AF" into several columns.
+New columns are entitled "author\_" and goes from 1 to 15 (1 if there is only 1 author and 15 if there are 15 authors).
+We thus discard of the analysis paper with more than 15 authors.
+
+```{r}
+# Creation of a new column "nb_authors" to count the number of authors per article
+
+Corpus.Short$nb_authors <- str_count(Corpus.Short$AF, ";") + 1 #for the original data base
+Corpus.Short.Small$nb_authors <- str_count(Corpus.Short.Small$AF, ";") + 1 #for the reduced data base
+
+# Display the 1000 largest values in the "nb_authors" column to see the maximum number of authors in the database. There are roughly 1500 articles that have more than 10 authors (0.2 % of the total so not very important).
+
+top_1000_max_authors <- head(sort(Corpus.Short$nb_authors, decreasing = TRUE), 1000)
+print(top_1000_max_authors)
+
+# Or alternatively:
+table(Corpus.Short$nb_authors) # Number of articles by number of authors
+hist(Corpus.Short$nb_authors, breaks = 281) # Same thing but as a histogram
+sum(table(Corpus.Short$nb_authors)[1:15])/length(Corpus.Short$nb_authors) # Let's focus on articles with maximum 15 authors as this accounts for 99,95% of articles
+
+# Creation of the columns for the authors : each column correspond to an additional author for each article (author_1 if 1 author and author_15 if 15 authors, with one author per column). There are 603 838 missing values due to the fact that 172 171 articles have only 1 author. 
+
+Corpus.Short.Small.Filt <- Corpus.Short.Small %>%
+  filter(nb_authors < 16) %>% # Only keep articles with 15 authors at max (99.95% of the corpus)
+  separate(col = AF, into = paste0("author_", 1:15), sep = ";", remove = FALSE, extra = "warn") # I've just changed the extra argument with "warn", to check if there are any mistakes
+
+# Just to check the number of articles with exactly 15 authors (code below is commented, but possible to check)
+# Corpus.Short.Small.Filt %>% 
+#   filter(nb_authors == 15) %>% 
+#   dim() 
+
+# Last check: number of articles by authors, but using the random sample of 60 000 articles:
+table(Corpus.Short.Small.Filt$nb_authors)
+```
+
+Check to see if there are no missing values in one of the new column created : OK
+
+```{r}
+results<- vector("logical", length = 15)
+
+for (i in 1:15) {
+  results[i] <- all(is.na(Corpus.Short.Small.Filt[[paste0("author_", i)]]))
+}
+
+print(results)
+```
+
+### Step 2 : Create a column for each last name (l_name) and first name (f_name).
+
+f_name will be used during all the analysis of the gender.
+
+```{r}
+for (i in 1:15) {
+  Corpus.Short.Small.Filt <- Corpus.Short.Small.Filt %>%
+    separate(col = paste0("author_", i), into = c(paste0("l_name_", i), paste0("f_name_", i)), sep = ",", remove = FALSE, extra = "drop")
+}
+```
+
+The warning message signals that some authors have no first name or last name.
+Ideed some authors don't have first names, that we need to keep in mind in the rest of the analyis.
+Two reasons for the absence of first name: some authors have no firstname in the data (they only mention one name, classified as last name, and no first name), and some authors have their names not separated with comma ",", thus not making possible to separate last name and first name.
+This is a mistake from the raw data from the bibliographic database, that seems to occur not that much.
+We can set this problem aside for the rest of the analysis.
+
+```{r}
+# Check the case of an article with multiple missing authors (replace the number 27162 with one of the recurring number coming from the warning message in the preceding command)
+Corpus.Short.Small.Filt %>% 
+  slice(27162) %>% 
+  select(matches("\\d$")) # To select columns whose name ends with a number (and therefore only view coluns such as f_name_i etc...)
+```
+
+### Step 3 : Cleaning in two steps: - first step -\> removing spaces and uniformize character encoding of first names and last names to then generate a column "fullname_i" which is made of first name and last name.
+
+This column will be the one used to match with the list of female economists (which is made of female economists full names) - second step -\> continue cleaning of the firstnames columns (remove special characters, punctuations and isolated letters).
+This will give us first names columns that are cleaned and ready to be used with the gender command
+
+```{r}
+
+Corpus.CleanedNames <- Corpus.Short.Small.Filt
+
+for (i in 1:15) {
+  print(i)
+  # Supprimer les textes entre parenthèses :
+  # Pour le prénom
+  Corpus.CleanedNames[[paste0("f_name_", i)]] <- gsub(pattern = "\\s*\\([^\\)]+\\)",
+                                                      replacement = "",
+                                                      x = Corpus.CleanedNames[[paste0("f_name_", i)]])
+  # Pour le nom
+  Corpus.CleanedNames[[paste0("l_name_", i)]] <- gsub(pattern = "\\s*\\([^\\)]+\\)",
+                                                      replacement = "",
+                                                      x = Corpus.CleanedNames[[paste0("l_name_", i)]])  
+  
+  # Supprimer les espaces supplémentaires : 
+  # Pour le prénom
+  Corpus.CleanedNames[[paste0("f_name_", i)]] <- gsub(pattern = "\\s+",
+                                                      replacement = " ",
+                                                      x =  Corpus.CleanedNames[[paste0("f_name_", i)]])
+  # Pour le nom
+  Corpus.CleanedNames[[paste0("l_name_", i)]] <- gsub(pattern = "\\s+", 
+                                                      replacement = " ",
+                                                      x =  Corpus.CleanedNames[[paste0("l_name_", i)]])
+  
+  # Supprimer les espaces de début et de fin : 
+  # Pour le prénom
+  Corpus.CleanedNames[[paste0("f_name_", i)]] <- trimws(Corpus.CleanedNames[[paste0("f_name_", i)]])
+  # Pour le nom
+  Corpus.CleanedNames[[paste0("l_name_", i)]] <- trimws(Corpus.CleanedNames[[paste0("l_name_", i)]])
+  
+  # Remove all accents and uniformize character encoding
+  Corpus.CleanedNames[[paste0("f_name_", i)]] <- stri_trans_general(Corpus.CleanedNames[[paste0("f_name_", i)]],
+                                                                    "Latin-ASCII")
+  Corpus.CleanedNames[[paste0("l_name_", i)]] <- stri_trans_general(Corpus.CleanedNames[[paste0("l_name_", i)]],
+                                                                      "Latin-ASCII")
+  
+  # Créer une colonne fullname_i qui combine firstname et lastname avec un espace:
+ 
+  Corpus.CleanedNames <- Corpus.CleanedNames %>% 
+    mutate(!!paste0("fullname_", i) := ifelse(test = is.na(.[[paste0("f_name_", i)]]) & is.na(.[[paste0("l_name_", i)]]), 
+                                              yes = NA,
+                                              no = ifelse(
+                                                test = is.na(.[[paste0("f_name_", i)]]),
+                                                yes = .[[paste0("l_name_", i)]],
+                                                no = ifelse(
+                                                  test = is.na(.[[paste0("l_name_", i)]]), 
+                                                  yes = .[[paste0("f_name_", i)]], 
+                                                  no = paste(.[[paste0("f_name_", i)]],
+                                                             .[[paste0("l_name_", i)]], 
+                                                             sep = " ")
+                                                )
+                                              )
+                                              )
+           ) 
+
+
+# Second step cleaning: nettoyer la colonne first name pour améliorer l'identification des prénoms avec la commande gender
+# Supprimer les lettres suivies d’un point : 
+  Corpus.CleanedNames[[paste0("f_name_", i)]] <- gsub(pattern = "[A-Za-z]\\.", 
+                                                      replacement = "",
+                                                      x =  Corpus.CleanedNames[[paste0("f_name_", i)]])
+  
+  # Remplacer les ponctuations par des espaces (exemple des noms composés) : 
+  Corpus.CleanedNames[[paste0("f_name_", i)]] <- gsub(pattern = "[[:punct:]]", 
+                                                      replacement = " ",
+                                                      x = Corpus.CleanedNames[[paste0("f_name_", i)]])
+  
+  # Supprimer les espaces supplémentaires (double espaces potentiellement dûs au remplacement de la ponctuation par des espaces): 
+  Corpus.CleanedNames[[paste0("f_name_", i)]] <- gsub(pattern = "\\s+",
+                                                      replacement = " ",
+                                                      x =  Corpus.CleanedNames[[paste0("f_name_", i)]])
+
+  # Supprimer les espaces de début et de fin : 
+  Corpus.CleanedNames[[paste0("f_name_", i)]] <- trimws(Corpus.CleanedNames[[paste0("f_name_", i)]])
+  
+  # If several first names only keep the first one:
+  Corpus.CleanedNames[[paste0("f_name_", i)]] <- map_chr(.x = Corpus.CleanedNames[[paste0("f_name_", i)]],
+                                                         .f =  ~ strsplit(.x, " ")[[1]][1])
+  
+  
+  # Supprimer les espaces de début et de fin (à nouveau, au cas où la dernière opération en a introduit):
+  Corpus.CleanedNames[[paste0("f_name_", i)]] <- trimws(Corpus.CleanedNames[[paste0("f_name_", i)]])
+
+  
+}
+
+# Check how it looks like
+check <- Corpus.CleanedNames %>% 
+  slice(1:20) %>% 
+  select(matches("\\d$"))
 
 ```
 
+Jean-Paul devient Jean Paul, les parethèses et les chiffres sont supprimées ainsi que les lettres suivies d'un point.
+
+## Step 4 : Dataframe for probabilities of gender according to first name
+
+La méthode "ssa" utilise les noms de bébés de la US Census List des États-Unis.
+Elle se restreint donc seulement aux EU.
+La méthode "ipums" recherche les noms à partir des données du recensement américain Integrated Public Use Microdata Series.
+La méthode "napp" utilise les microdonnées de recensement du Canada, de la Grande-Bretagne, du Danemark, de l'Islande, de la Norvège et de la Suède de 1801 à 1910 créées par le North Atlantic Population Project.
+La méthode "kantrowitz" utilise le corpus Kantrowitz de noms masculins et féminins.
+La méthode "genderize" utilise l'API Genderize.io <https://genderize.io/>, qui est basée sur les "profils d'utilisateurs des principaux réseaux sociaux".
+
+En revanche, je ne sais pas comment le package traite les prénoms qu'il ne connait pas.
+-\> A priori: Il renvoie une valeur manquante / pas de valeur.
+Par exemple
+
+```{r}
+  test1 = gender("Loic")
+  test2 = gender("Jeanu")
+```
+
+Les différentes méthodes donnent bien des résultats différents.
+Chaque méthode ont des listes de noms différents, et entre méthode, un même prénom peut avoir une probabilité de genre différente.
+
+Nous démarrons par assigner le genre au prénom des auteurs avec la méthode ssa qui semble la plus adaptée pour notre corpus (car issue de données américaines relativement récente, et les Etats-Unis sont composés d'un nombre important de cultures/civilisations, augmentant ainsi l'ensemble de prénoms possibles).
+
+Puis nous utiliserons la méthode "napp".
+
+```{r}
+#Avec une seule méthode (ssa par défaut)
+
+#Définition de la fonction
+get_gender_prob_ssa <- function(names)
+  
+{
+  gender(names, method = "ssa")
+}
+
+#Application de la fonction get_gender_prob aux colonnes de Corpus.Short qui commencent par f_name
+
+gender_proba_ssa <- lapply(Corpus.CleanedNames[, grepl("^f_name_", colnames(Corpus.CleanedNames))], get_gender_prob_ssa)
+
+#Combiner les résultats du code précédent en un seul dataframe, en les ajoutant lignes par lignes
+
+gender_proba_ssa_df <- do.call(rbind, gender_proba_ssa)
+
+#Garder les valeurs uniques
+
+gender_proba_ssa_df_2 <- gender_proba_ssa_df %>%
+  group_by(name) %>%
+  slice(1)
+```
+
+```{r}
+# Je propose d'améliorer l'approche: récupérer les cas uniques de prénoms par l'approche nap non repéré par ssa pour augmenter la liste de prénoms
+
+# D'abord avec la méthode napp qui a l'avantage d'ajouter un bon nombre de prénoms "nordiques"
+get_gender_prob_napp <- function(names)
+{
+  gender(names, 
+         method = c("napp"),
+         countries = c("Canada", "United Kingdom", "Denmark", "Iceland","Norway", "Sweden")
+         )
+}
+
+gender_proba_napp <- lapply(Corpus.CleanedNames[, grepl("^f_name_", colnames(Corpus.CleanedNames))], get_gender_prob_napp)
+
+gender_proba_napp_df <- do.call(rbind, gender_proba_napp)
+
+gender_proba_napp_df_2 <- gender_proba_napp_df %>%
+  group_by(name) %>%
+  slice(1) 
+
+# Only keep names not in gender_proba_df_2 and add them:
+gender_proba_napp_df_3 <- gender_proba_napp_df_2 %>%
+  filter(!(name %in% gender_proba_ssa_df_2$name)) 
+
+gender_proba_df <- gender_proba_ssa_df_2 %>% 
+  bind_rows(gender_proba_napp_df_3) %>% # Add them to the first names from ssa and put that in a new object
+  arrange(name)
+
+# Puis tentative avec la méthode kantrowitz
+get_gender_prob_kant <- function(names)
+{
+  gender(names, 
+         method = "kantrowitz"
+         )
+}
+
+# Suite méthode kantrowitz, pour voir les prénoms possiblement ajoutés mais abandon car long et peu de prénoms en plus
+# Attention: la ligne de code suivante prend une 10aine de minutes et ne rajoute qu'une 20 aine de prénoms que nous n'avons pas déjà. Ce n'est donc pas nécessaire de la faire 
+# gender_proba_kant <- lapply(Corpus.CleanedNames[, grepl("^f_name_", colnames(Corpus.CleanedNames))], get_gender_prob_kant)
+# 
+# gender_proba_df_kant <- do.call(rbind, gender_proba_kant)
+# 
+# gender_proba_df_kant <- gender_proba_df_kant %>%
+#   group_by(name) %>%
+#   slice(1) 
+# 
+# gender_proba_df_6 <- gender_proba_df_kant %>%
+#   filter(!(name %in% gender_proba_df$name), !is.na(gender), gender %in% c("male","female")) %>% 
+#   mutate(proportion_male = ifelse(gender == "male", 1.0000, 0.0000),
+#          proportion_female = ifelse(gender != "male", 1.0000, 0.0000))
+
+# Objet final: tous les prénoms et leur proba de genre:
+names_proba_df <- gender_proba_df 
+# %>% 
+#   bind_rows(gender_proba_df_6) %>% 
+#   arrange(name)
+```
+
+Problème corrigé: On a maintenant un annuaire de 10400 prénoms environ.
+Avant de faire l'algorithme d'appariement du genre au prénom, nous pouvons regarder la quantité de prénoms d'auteurs déifférents dans le corpus.
+Et la comparer à nos 10400 prénoms différents.
+
+```{r}
+all_names_incorpus <- unlist(Corpus.CleanedNames[, grepl("^f_name_", colnames(Corpus.CleanedNames))]) %>% 
+  unique() # Vecteur qui contient tous les prénoms différents dans le corpus
+length(all_names_incorpus)
+```
+
+Environ 27300 prénoms.
+Nous avons donc un peu plus d'1/3 des prénoms dont nous pouvons déterminer le genre à partir des méthodes SSA et NAPP, et 2/3 qui ne seront pas reconnus par cette méthode.
+Quels sont les noms que nous ne pourrons pas apparier, et combien y-en-a-t-il?
+
+```{r}
+unmatched_names <- all_names_incorpus[!(all_names_incorpus %in% names_proba_df$name)]
+length(unmatched_names)
+unmatched_names[1:100]
+```
+
+Environ 17 000 prénoms que nous ne pourrons pas apparier.
+Beaucoup de prénoms qui ne semblent pas être issues de culture occidentales.
+Nous verrons plus tard qu'il s'agit aussi de prénoms très rare et qui reviennent peu régulièrement dans les articles.
+Sur les 60000 articles, ces prénoms reviennent finalement peu de fois, ce qui affecte assez peu l'appariement.
+En revanche, cela introduit un biais de sélection important: nous sommes incapable de genrer les auteurs avec des prénoms non occidentaux.
+
+Dernière tentative d'augmenter la liste de prénoms et le genre associés.
+La méthode genderize du package gender.
+Est-il possible d'utiliser la méthode avec genderize?
+Il s'agit d'un essai ci-dessous, mais cela ne fonctionne pas: le site genderize refuse la nombre trop grand de requêtes qu'il faudrait faire
+
+```{r}
+get_gender_prob_genderize <- function(names)
+{
+  gender(names, 
+         method = "genderize"
+         )
+}
+
+# Initialize an empty vector to store the results
+results <- tibble()
+
+# Apply the function with a delay of 0.1 seconds between each application
+for (i in 1:30) {
+  print(i)
+  result <- get_gender_prob_genderize(unmatched_names[i])
+  results <- bind_rows(results, result)
+  Sys.sleep(1)  # Pause for 0.01 seconds
+}
+
+
+```
+
+L'API de genderize bloque après trop de requêtes.
+
+## Step 5 : Creation of an algorithm to assign first names to gender
+
+We assign gender to a name using the following algorith: 1.
+Test If first name is missing (NA): If missing: no gender is assigned (NA) If not: 2.
+test if first name is among the list of common chinese first names (for construction of `common_chinese_names`see Rscript) If first name present: gender is unknown If not present: 3.
+test if the full name is in the list of the top10% of fermale economists If full name is present: gender is female If not present: 4.
+test if first name is missing in the list of first name with gender probability (`names_proba_df$name`): If absent: no gender is assigned (NA) If not: assign gender according to probability threshold.
+Rule is the following: If probability of a male first name is larger than 0.9, gender is male If probability of a male first name is smaller than 0.1, gender is female If probability of a male first name is between 0.1 and 0.9, then gender is unknown.
+
+We code it as follows:
+
+```{r}
+# Garder uniquement les colonnes qui nous intéressent dans le dataframe gender_proba_df_2
+# Je propose de garder toutes les variables pour le moment
+head(names_proba_df)
+
+# Récupérer les noms des femmes économistes et des prénoms chinois communs
+load(here(dir$prep.data, "FemaleEconomists_Names.Rdata"))
+load(here(dir$prep.data, "Common_Chinese_Names.Rdata"))
+load(here(dir$prep.data, "MaleEconomists_Names.Rdata"))
+
+common_chinese_names <- common_chinese_names[common_chinese_names!="Juan"]
+
+Corpus.CleanedNames.2 <- Corpus.CleanedNames
+# Algorithm that create a gender variable. But it also adds for all authors their probability of male firstname, and their probability of female first name
+for(i in 1:15) {
+  print(i)
+  Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>%
+    # First create variable gender (takes value: NA, unknown, male and female)
+    mutate(
+      !!paste0("gender_", i) := ifelse(
+        test = is.na(.[[paste0("f_name_", i)]]), # 1. if first name is missing in Corpus.CleanedNames.2 gender = NA
+        yes = NA,
+        no = ifelse( 
+          test = .[[paste0("f_name_", i)]] %in% common_chinese_names, # 2. if first name is in the list of common chinese first names gender = unknown
+          yes = "unknown",
+          no = ifelse(
+            test = .[[paste0("fullname_", i)]] %in% top10_female_economists, # 3. If full name is in the list of top 10% of female economists gender = female
+            yes = "female",
+            no = ifelse(
+              test = .[[paste0("fullname_", i)]] %in% top10_male_economists, # 4. If full name is in the list of top 10% of male economists gender = male
+              yes = "male",
+              no = ifelse(
+                test = !(.[[paste0("f_name_", i)]] %in% names_proba_df$name), # 5. If first name is absent from the list of first names with measured gender probability (absent from names_proba_df) gender = NA
+                yes = NA,
+                no = case_when(
+                  names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]], names_proba_df$name)] > 0.9 ~ "male",
+                  names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]], names_proba_df$name)] < 0.1 ~ "female",
+                  names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]], names_proba_df$name)] >= 0.1 & names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]], names_proba_df$name)] <= 0.9 ~ "unknown"
+                )
+              )
+            )
+          )
+        )
+      )
+    ) %>%
+    mutate(
+      !!paste0("proportion_male_", i) := ifelse(
+        test = is.na(.[[paste0("f_name_", i)]]), # Create the variable that gives the probability that author is male, only if gender is assigned
+        yes = NA,
+        no = ifelse(
+          test = .[[paste0("f_name_", i)]] %in% common_chinese_names,
+          yes = NA,
+          no = ifelse(
+            test = .[[paste0("fullname_", i)]] %in% top10_female_economists,
+            yes = 0,
+            no = ifelse(
+              test = .[[paste0("fullname_", i)]] %in% top10_male_economists,
+              yes = 1,
+              no = ifelse(
+                test = !(.[[paste0("f_name_", i)]] %in% names_proba_df$name),
+                yes = NA,
+                no = ifelse(
+                  test = .[[paste0("gender_", i)]] %in% c("male", "female"),
+                  yes = names_proba_df$proportion_male[match(.[[paste0("f_name_", i)]], names_proba_df$name)],
+                  no = NA
+                )
+              )
+            )
+          )
+        )
+      ),
+      !!paste0("proportion_female_", i) := ifelse(
+        test = is.na(.[[paste0("f_name_", i)]]), # Create the variable that gives the probability that author is female, only if gender is assigned
+        yes = NA,
+        no = ifelse(
+          test = .[[paste0("f_name_", i)]] %in% common_chinese_names,
+          yes = NA,
+          no = ifelse(
+            test = .[[paste0("fullname_", i)]] %in% top10_female_economists,
+            yes = 1,
+            no = ifelse(
+              test = .[[paste0("fullname_", i)]] %in% top10_male_economists,
+              yes = 0,
+              no = ifelse(
+                test = !(.[[paste0("f_name_", i)]] %in% names_proba_df$name),
+                yes = NA,
+                no = ifelse(
+                  test = .[[paste0("gender_", i)]] %in% c("male", "female"),
+                  yes = names_proba_df$proportion_female[match(.[[paste0("f_name_", i)]], names_proba_df$name)],
+                  no = NA
+                )
+              )
+            )
+          )
+        )
+      ),
+      nb_authors_gendered = rowSums(!is.na(select(., starts_with("proportion_male")))), # Count the number of authors with identified gender
+      ratio_identified_gender = nb_authors_gendered / nb_authors # Among authors, the proportion of authors with identified gender
+    )
+}
+
+# Check results
+check <- Corpus.CleanedNames.2 %>% 
+  slice(1:30) %>% 
+  select(matches("\\d$"), nb_authors_gendered, nb_authors)
+
+# Old code (can be removed later if needed)
+# determine_gender <- function(proportion_male) {
+#   if (is.na(proportion_male)) {
+#     return(NA)  # Si la proportion est NA, retourner NA
+#   } else if (proportion_male > 0.90) {
+#     return(1)  # Si la proportion de probabilité est > 90%, on considère que c'est un homme
+#   } else if (proportion_male <= 0.10) {
+#     return(0)  # Si la proportion de probabilité est <= 10%, on considère que c'est une femme
+#   } else {
+#     return("Unknown gender")  # Si la proportion est entre 0.1 et 0.9, le genre est inconnu
+#   }
+# }
+
+# Détermination du genre (nouvelle colonne gender_i) pour chaque colonne f_name_i
+# for (i in 1:10) 
+#   {
+#   f_name_col <- paste0("f_name_", i)
+#   gender_col <- paste0("gender_", i)
+  
+#Création de deux nouvelles colonnes proportion_male (probabilité que le nom soit celui d'un homme) et gender (variable binaire si le prénom est assigné à celui d'un homme et 0 sinon) dans Corpus.Short 
+  
+# Corpus.Short <- Corpus.Short %>%
+#     left_join(gender_proba_df_2, by = setNames("name", f_name_col)) %>%
+#     mutate(!!gender_col := sapply(proportion_male, determine_gender)) %>%
+#     select(-proportion_male)
+# }
+```
+
+# Step 6 : Vérification de l'algorithme, pour chaque auteur unique
+
+Un auteur unique, est une valeur unique de la variable "author_i" pour tout i allant de 1 à 15.
+
+Regardons à quel point l'algorithme est capable d'assigner un genre aux auteurs par article:
+
+```{r}
+ratio_by_nbauthours <- Corpus.CleanedNames.2 %>% 
+  group_by(nb_authors) %>% 
+  summarize(mean_ratio = mean(ratio_identified_gender, na.rm = T),
+            med_ratio = median(ratio_identified_gender),
+            nb_article = n())
+```
+
+Regardons à quel point l'algorithme est capable d'assigner un genre à tous les full names d'auteurs:
+
+```{r}
+# Store in vectors all columns of information of  authors for i from 1 to 15 : empiler les colonnes - analyse par auteur
+all_firstnames_incorpus <- unlist(Corpus.CleanedNames.2[, grepl("^f_name_", colnames(Corpus.CleanedNames.2))])
+all_lastnames_incorpus <- unlist(Corpus.CleanedNames.2[, grepl("^l_name_", colnames(Corpus.CleanedNames.2))])
+all_fullnames_incorpus <- unlist(Corpus.CleanedNames.2[, grepl("^fullname_", colnames(Corpus.CleanedNames.2))])
+all_fullnames_incorpus2 <- unlist(Corpus.CleanedNames.2[, grepl("^author_", colnames(Corpus.CleanedNames.2))]) # This is the column of original author information
+all_gender_incorpus <- unlist(Corpus.CleanedNames.2[, grepl("^gender_", colnames(Corpus.CleanedNames.2))])
+all_proportionmale_incorpus <- unlist(Corpus.CleanedNames.2[, grepl("^proportion_male_", colnames(Corpus.CleanedNames.2))])
+all_proportionfemale_incorpus <- unlist(Corpus.CleanedNames.2[, grepl("^proportion_female_", colnames(Corpus.CleanedNames.2))])
+
+authors_df <- tibble(firstname = all_firstnames_incorpus, #base de données générale pour les auteurs
+                     lastname = all_lastnames_incorpus,
+                     fullname = all_fullnames_incorpus, # Clean full name
+                     fullname2 = all_fullnames_incorpus2, # Raw full name
+                     gender = all_gender_incorpus,
+                     proportion_male = all_proportionmale_incorpus,
+                     proportion_female = all_proportionfemale_incorpus) %>% 
+  # filter(!is.na(firstname)) %>% 
+  filter(!is.na(fullname2)) %>% # Only keep existing authors
+  #mutate(fullname = trimws(fullname)) %>% 
+  group_by(firstname, lastname) %>% # Consider a row full name to be a unique author (our algorithm would not distinguish authors with similar full names, so let's do so)
+  mutate(n_articles = n()) %>%  # Number of articles for the authors with this full name
+  slice(1) %>% #valeurs uniues
+  arrange(fullname2) %>%
+  ungroup()
+
+length(authors_df$fullname2)  
+```
+
+111 112 different authors for 60 000 articles.
+
+```{r}
+
+table(is.na(authors_df$gender))
+table(authors_df$gender)
+# Check authors that have written more than 10 articles:
+authors_with10articlesormore <- authors_df %>% 
+  filter(n_articles>9)
+# Il s'agit en majorité de noms issus d'asie de l'est
+
+# By number of articles written for each author, how much missing gender?
+table(authors_df$n_articles, authors_df$gender, useNA = "ifany") #False : auteurs bien assignés
+```
+
+Overall we have about 25% of authors with unidentified gender (30 000/80 000).
+When we will work at the level of the article, we thus will reduce the amount of articles with unassigned gender proportion of authorship as there are articles with multiple authors (and among them, at least some will have an assigned gender).
+The more the number of authors is important, the higher the prob of assigning gender to the article is higher
+
+For instance, among authors that have written 1 article, about 76 000 have an assigned gender, and 29 000 have a missing info on gender (about 25% of missing gender).
+La ratio diminue jusqu'aux auteurs avec 6 articles (15% de genre non assignés), puis ensuite le fait de travailler sur un échantillon aléatoire du corpus semble brouill l'information.
+Mais il semble qu'il y ait des auteurs importants (avec plus de 10 articles), dont le genre n'est pas assigné (souvent des auteurs d'asie de l'est).
+
+Depuis l'aout de top_10_male_economists, les auteurs principaux (qui écrivent beaucoup d'articles) sont correctement assgnés.
+Rq : disparition de l'auteur qui avait écrit 54 articles.
+
+# Step 7 : Agregation at the level of the article
+
+```{r}
+# Je corrige pour aggréger avec les colonnes proportion_male et proportion_female plutôt que les colonnes gender
+# Identifier les colonnes gender_
+proportion_male_cols <- grep("^proportion_male_", colnames(Corpus.CleanedNames.2), value = TRUE)
+proportion_female_cols <- grep("^proportion_female_", colnames(Corpus.CleanedNames.2), value = TRUE)
+
+# Calculer la somme des genres masculins puis féminin pour chaque ligne
+Corpus.CleanedNames.2$sum_gender_male <- rowSums(Corpus.CleanedNames.2[proportion_male_cols], na.rm = TRUE)
+Corpus.CleanedNames.2$sum_gender_female <- rowSums(Corpus.CleanedNames.2[proportion_female_cols], na.rm = TRUE)
+
+# Calculer la proportion de genres masculins et féminin sur tous les auteurs, puis sur les auteurs au genre identifié
+# Homme
+Corpus.CleanedNames.2$proportion_gender_male_all <- Corpus.CleanedNames.2$sum_gender_male / Corpus.CleanedNames.2$nb_authors
+Corpus.CleanedNames.2$proportion_gender_male_id <- Corpus.CleanedNames.2$sum_gender_male / Corpus.CleanedNames.2$nb_authors_gendered
+# Femme
+Corpus.CleanedNames.2$proportion_gender_female_all <- Corpus.CleanedNames.2$sum_gender_female / Corpus.CleanedNames.2$nb_authors
+Corpus.CleanedNames.2$proportion_gender_female_id <- Corpus.CleanedNames.2$sum_gender_female / Corpus.CleanedNames.2$nb_authors_gendered
+```
+
+Test : compter le nombre de données non manquantes dans toutes les colonnes gender (nombre d'auteurs qui ont été assignés donc qui prennent la valeur 0 ou 1) et comparaison avec le nombre total d'auteur
+
+Nous pouvons faire une analyse similaire en comparant le pourcentage de genre d'un article sur tous les auteurs, avec le pourcentage de genre d'un article sur tous les auteurs identifiés: comparaison des ratios selon si l'on prend tous les auteurs assignés par article ou tous les auteurs
+
+```{r}
+plot(Corpus.CleanedNames.2$proportion_gender_female_all, Corpus.CleanedNames.2$proportion_gender_female_id)
+```
+
+Sur la ligne à 45 degrés, nous avons les articles pour lesquels tous les auteurs ont un genre qui est identifié.
+Et au dessus de la ligne à 45 degrés, les articles pour lesquels certains auteurs n'ont pas de genre identifiés.
+
+Analyse de l'assignation du genre à l'échelle de l'article :
+
+Il est aussi possible de faire l'analyse à partir de la variable "ratio_identified_gender", qui donne par article, le pourcentage d'auteurs dans le nb d'auteurs totale dont le genre est identifié
+
+```{r}
+Gender_of_Articles <- Corpus.CleanedNames.2 %>% 
+  summarize(Nb_articles = length(ratio_identified_gender), # Nb total d'article
+            NoGender = length(ratio_identified_gender[is.na(ratio_identified_gender) | ratio_identified_gender == 0]) / Nb_articles, # Ratio d'articles avec aucun auteur dont le genre est identifié ou NA # Ratio d'article avec aucun auteur dont le genre est identifié : raouter valeurs manuntes
+            AllGender = length(ratio_identified_gender[ratio_identified_gender == 1])/Nb_articles, # Ratio d'article où tous les auteurs sont identifiés
+            Gender_Larger0.5 = length(ratio_identified_gender[ratio_identified_gender >= 0.5])/Nb_articles, # Ratio d'article où au moins 50% des auteurs sont identifiés
+            Gender_Larger0.9 = length(ratio_identified_gender[ratio_identified_gender >= 0.9])/Nb_articles, # Ratio d'article où au moins 90% des auteurs sont identifiés
+            Gender_Larger0.25 = length(ratio_identified_gender[ratio_identified_gender >= 0.25])/Nb_articles, # Ratio d'article où au moins 25% des auteurs sont identifiés
+            Mean_IdentifiedGender = mean(ratio_identified_gender), # Moyenne du ratio d'auteurs identifé
+            Median_identifiedGender = median(ratio_identified_gender))# Médiane
+
+Gender_of_Articles
+```
+
+Nous voyons que pour environ 15% des articles, il nous est impossible d'assigner le genre à l'un des auteurs.
+Pour plus de 50% des articles nous sommes capable d'identifer le genre de tous les auteurs.
+Pour 75% des articles nous sommes capable d'assigner la moitié des auteurs.
+Pour la moitié des articles nous sommes capable d'assigner le genre de 90% des auteurs.
+Pour environ 80% des articles, nous pouvons assigner le genre de 25% des auteurs.
+
+## Step 8 : Analyse de l'assignation du genre à l'échelle des auteurs :
+
+```{r}
+# Check 100 first authors without gender and most articles
+NotGendered_authors <- authors_df %>% 
+  filter(is.na(gender)) %>% 
+  arrange(firstname)
+
+NotGendered_authors #30 454 auteurs qui n'ont pas été assignés sur 111 116 auteurs différents (27% d'auteurs non assignés)
+```
+
+## Step 9 : Creation of categorical variables :
+
+```{r}
+#Création de variables binaires : sum_gender_male_bin est défini comme 1 si sum_gender_male est supérieur à 0, sinon 0 (il y a forcément 1 homme auteur), sum_gender_female_bin est défini comme 1 si sum_gender_female est supérieur à 0, sinon 0.
+Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>%
+  mutate(
+    sum_gender_male_bin = ifelse(sum_gender_male > 0, 1, 0),
+    sum_gender_female_bin = ifelse(sum_gender_female > 0, 1, 0)
+  )
+
+#Création de la variable catégorielle category_gender
+Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>%
+  mutate(
+    category_gender = case_when(
+      sum_gender_female_bin == 0 ~ "MM",
+      sum_gender_male_bin == 0 ~ "FF",
+      sum_gender_male_bin == 1 & sum_gender_female_bin == 1 ~ "MF"
+    )
+  )
+
+# Vérification des résultats
+table(Corpus.CleanedNames.2$category_gender)
+```
+
+# Step 10 : Descriptive Statistics : commencer ici
+
+First step : determine the absolute number of articles with at least 1 author identified in terms of gender with NoGender
+
+```{r}
+load(here(dir$prep.data, "GenderedAuthors_Data.Rdata"))
+OneGender_by_Articles <- Corpus.CleanedNames.2 %>% 
+  summarize(Nb_articles = length(ratio_identified_gender), # Nb total d'article
+            NoGender = length(ratio_identified_gender[is.na(ratio_identified_gender) | ratio_identified_gender == 0]) / Nb_articles)
+
+OneGender_by_Articles
+```
+
+Il y a au moins 85% des articles dont le genre a été assigné à au moins un auteur.
+
+## 1. Study of the sum_gender_female variable at an aggregate level
+
+```{r}
+library(ggplot2)
+```
+
+### 1.1. Proportion of male and female authors
+
+### 1.1.1. Descriptive statitistics : Proportion of male and female authors at an aggregate level
+
+```{r}
+#amélioration de ton code pour faire un tableau unique 
+# Charger les packages nécessaires
+library(dplyr)
+library(knitr)
+
+# Calcul des statistiques descriptives
+stats_proportion_female_all <- summary(Corpus.CleanedNames.2$proportion_gender_female_all)
+stats_proportion_female_id <- summary(Corpus.CleanedNames.2$proportion_gender_female_id)
+stats_sum_gender_female <- summary(Corpus.CleanedNames.2$sum_gender_female)
+stats_sum_gender_male <- summary(Corpus.CleanedNames.2$sum_gender_male)
+stats_proportion_male_all <- summary(Corpus.CleanedNames.2$proportion_gender_male_all)
+stats_proportion_male_id <- summary(Corpus.CleanedNames.2$proportion_gender_male_id)
+
+# Extraire les valeurs des statistiques descriptives
+extract_summary <- function(summary_obj) {
+  c(summary_obj["Min."], summary_obj["1st Qu."], summary_obj["Median"], summary_obj["Mean"], summary_obj["3rd Qu."], summary_obj["Max."])
+}
+
+# Créer un tableau de données avec les valeurs extraites
+results_table <- data.frame(
+  Statistic = c("Min", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"),
+  Proportion_Female_All = extract_summary(stats_proportion_female_all),
+  Proportion_Female_Id = extract_summary(stats_proportion_female_id),
+  Sum_Gender_Female = extract_summary(stats_sum_gender_female),
+  Sum_Gender_Male = extract_summary(stats_sum_gender_male),
+  Proportion_Male_All = extract_summary(stats_proportion_male_all),
+  Proportion_Male_Id = extract_summary(stats_proportion_male_id)
+)
+
+results_table
+```
+
+En moyenne, parmi tous les auteurs, il y a 20% de femmes par article.
+La part d'auteur femme en moyenne est de 30% (en mesurant la part parmi les auteurs dont le genre est identifié, par article).
+
+Le summary avec female nous dit qu'il y a 0.5 femmes auteurs par article.
+La médiane est intéressante: il y a 50% des articles qui sont rédigés sans auteur femme.
+Et le 3e quartile nous dit que 25% des articles ont une auteur qui est une femme.
+
+Le summary avec male nous dit qu'il y a 1.1 hommes auteurs par article.
+La médiane nous dit qu'au moins 50% des articles ont un auteur homme.
+Et Le 3e quartile nous dit que 25% des articles ont deux auteurs hommes.
+
+En moyenne 30% et 70% de femmes parmi les auteurs dont le genre a été identifié.
+
+### 1.1.2. Graphics : Proportion of male and female authors at an aggregate level
+
+```{r}
+hist(Corpus.CleanedNames.2$proportion_gender_male_id, main="Distribution de la proportion d'hommes", xlab="Proportion d'hommes", col="blue", breaks=20)
+hist(Corpus.CleanedNames.2$proportion_gender_female_id, main="Distribution de la proportion de femmes", xlab="Proportion de femmes", col="pink", breaks=20)
+```
+
+-   Distribution de femmes : la distribution est centrée vers la gauche donc beaucoup d'articles avec aucune femme (+ de 2500) avec très peu de valeurs au milieu de la distirbution et moins d'articles avec seulement des femmes (environ 10 000)
+-   Distribution d'hommes : la distribution est centrée vers la droite donc beaucoup d'articles que des hommes (+ de 2500) avec très peu de valeurs au milieu de la distirbution et moins d'articles avec aucun homme (environ 8 000)
+-   Peu de collaboration car peu de valeurs centrées
+
+```{r}
+#Distribution of sum_gender_male : bar chart
+
+#ggplot(data = Corpus.Short, mapping = aes(x = sum_gender_male)) + geom_bar() + labs(title = "Distribution of male authors per article", subtitle = "Bar Chart",x = "Number of male authors", y = "Number of articles") + scale_x_continuous(breaks = seq(0, 10, by = 1), limits = c(0, 10))
+
+##Distribution of sum_gender_female : bar chart
+
+#ggplot(data = Corpus.Short, mapping = aes(x = sum_gender_female)) + geom_bar() + labs(title = "Distribution of female authors per article", subtitle = "Bar Chart", x = "Number of female authors", y = "Number of articles") + scale_x_continuous(breaks = seq(0, 10, by = 1), limits = c(0, 10))
+
+#Distribution of sum_gender_male : density graph
+#ggplot(Corpus.Short, aes(x = sum_gender_male)) + geom_density(linewidth = 0.75) + labs( title = "Distribution of male authors per article", subtitle = "Density Graph", x = "Number of male authors", y = "Density") + scale_x_continuous(breaks = seq(0, 10, by = 1), limits = c(0, 10))
+
+#ggplot(Corpus.Short, aes(x = sum_gender_female)) + geom_density(linewidth = 0.75) + labs(title = "Distribution of female authors per article", subtitle = "Density Graph", x = "Number of female authors", y = "Density") + scale_x_continuous(breaks = seq(0, 10, by = 1), limits = c(0, 10))
+```
+
+### 1.2. Proportion of female and male authors according to categorical variables
+
+### 1.2.1 Descriptive statistics: Proportion of female and male authors according to categorical variables
+
+```{r}
+stats_by_category <- Corpus.CleanedNames.2 %>%
+  group_by(category_gender) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Median_Proportion_Female_Id = median(proportion_gender_female_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
+    Median_Proportion_Male_Id = median(proportion_gender_male_id, na.rm = TRUE),
+  )
+stats_by_category
+```
+
+-   Catégorie FF : moyenne et médiane de 100% de femmes (logique)
+-   Catégorie MM : moyenne et médiane de 100% d'hommes (logique)
+-   Catégorie MF : 30% de femmes en moyenne pour les articles collaboratifs et 70% d'hommes
+
+### 1.2.2 Graphics : Proportion of female and male authors according to categorical variables
+
+```{r}
+stats_long <- stats_by_category %>%
+  pivot_longer(cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id), #colonne que l'on veut mettre en format long = moyennes
+               names_to = "Gender", #nouvelle colonne intitulée "Gender"
+               values_to = "Proportion") %>% #valeurs dans une nouvelle colonne intitulée "Proportion"
+  mutate(Gender = ifelse(Gender == "Mean_Proportion_Female_Id", "Female", "Male")) #Si Gender est égal à "Mean_Proportion_Female_Id", alors nous remplaçons cette valeur par "Female". Si Gender est égal à "Mean_Proportion_Male_Id", alors nous remplaçons cette valeur par "Male".
+
+# Créer le graphique
+ggplot(stats_long, aes(x = category_gender, y = Proportion, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Female and Male Authors According to Categorical Variables",
+       x = "Gender Category",
+       y = "Mean Proportion",
+       fill = "Gender") +
+  theme_minimal()
+```
+
+On retrouve les résultats des statistiques descriptives avec environ 30% de femmes et 70% d'homems pour les articles collaboratifs.
+
+```{r}
+#library(ggridges)
+#Numerical and categorical variable
+#ggplot(Corpus.Short, aes(x=sum_gender_male, y=category, fill=category, color=category)) + geom_density_ridges(alpha=0.5)
+
+#ggplot(Corpus.Short, aes(x=category, y=proportion_gender_male)) + geom_boxplot()
+
+#ggplot(Corpus.Short, aes(x=category, y=proportion_female)) + geom_boxplot()
+```
+
+### 1.3.Overall Temporal evolution
+
+### 1.3.1. Descriptive statistics : overall temporal evolution
+
+```{r}
+annual_stats <- Corpus.CleanedNames.2 %>%
+  group_by(PY) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE)
+  )
+annual_stats
+```
+
+La proportion moyenne de femmes dans les articles publiés semble augmenter progressivement, d'environ 24,39% en 2011 à environ 33,17% en 2020.
+En parallèle, la proportion moyenne d'hommes diminue légèrement sur la même période, passant d'environ 75,61% en 2011 à environ 66,83% en 2020.
+Evolution vers une plus grande diversité de genres dans les publications au fil du temps, avec une augmentation de la représentation des femmes dans les articles
+
+### 1.3.2. Graphics : overall temporal evolution
+
+```{r}
+annual_stats_long <- annual_stats %>%
+  pivot_longer(
+    cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id),
+    names_to = "Gender",
+    values_to = "Proportion"
+  ) %>%
+  mutate(Gender = ifelse(Gender == "Mean_Proportion_Female_Id", "Female", "Male"))
+
+# Créer le graphique
+ggplot(annual_stats_long, aes(x = PY, y = Proportion, color = Gender)) +
+  geom_line(linewidth = 1) +
+  labs(title = "Evolution of Gender Proportions Over Time",
+       x = "Publication Year",
+       y = "Mean Proportion",
+       color = "Gender") +
+  theme_minimal()
+```
+
+```{r}
+# Distribution of female authors accross time
+#ggplot(Corpus.Short, aes(x = PY, y = sum_gender_female)) + geom_point() + labs(title = "Proportion of female authors across time", x = "Publication date", y = "Proportion") + scale_y_continuous(breaks = seq(0, 20, by = 1), limits = c(0, 20))
+
+#ggplot(Corpus.Short, aes(x = PY, y = proportion_gender_male)) + geom_point() + labs(title = "Proportion of male authors across time", x = "Publication date", y = "Proportion") + scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0, 1))
+```
+
+### 1.4. Temporal evolution according to categorical variables
+
+### 1.4.1. Descriptive statistics : temporal evolution according to categorical variables
+
+```{r}
+# Calculer les moyennes annuelles des proportions de genres par catégorie de genre
+# Calculer les moyennes annuelles des proportions de genres par catégorie de genre
+annual_stats_by_category <- Corpus.CleanedNames.2 %>%
+  group_by(PY, category_gender) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
+    .groups = 'drop' #`summarise()` has grouped output by 'PY'. You can override using the `.groups` argument.
+  )
+
+annual_stats_by_category
+```
+
+```{r}
+# Restructurer les données pour ggplot2
+annual_stats_by_category_long <- annual_stats_by_category %>%
+  pivot_longer(
+    cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id),
+    names_to = "Gender",
+    values_to = "Proportion"
+  ) %>%
+  mutate(Gender = ifelse(Gender == "Mean_Proportion_Female_Id", "Female", "Male"))
+
+# Créer le graphique
+ggplot(annual_stats_by_category_long, aes(x = PY, y = Proportion, color = Gender)) +
+  geom_line(size = 1) +
+  facet_wrap(~ category_gender) +
+  labs(title = "Evolution of Gender Proportions Over Time by Category",
+       x = "Publication Year",
+       y = "Mean Proportion",
+       color = "Gender") +
+  theme_minimal()
+```
+
+L'analyse de l'évolution temporelle de la proportion de femmes dans les collaborations mixtes (MF) montre une tendance à la hausse, bien que légèrement variable d'une année à l'autre.
+En 2011, la proportion moyenne de femmes dans les collaborations MF était d'environ 24,77%, et cette proportion a augmenté progressivement au fil des années pour atteindre environ 31,17% en 2020.
+
+### 1.4.2. Descriptive statistics : temporal evolution according to categorical variables, by number of articles
+
+```{r}
+annual_stats_by_category_nbarticles <- Corpus.CleanedNames.2 %>%
+  group_by(PY, category_gender) %>%
+  summarize(
+    nb_articles=n()
+    )
+
+annual_stats_by_category_nbarticles
+```
+
+```{r}
+ggplot(annual_stats_by_category_nbarticles, aes(x = PY, y = nb_articles, color = category_gender, group = category_gender)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(title = "Number of Articles by Year and Gender Category",
+       x = "Publication Year",
+       y = "Number of Articles",
+       color = "Gender Category") +
+  theme_minimal() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)))
+```
+
+##2.Focus on climate change
+
+# 2.1 Climate change overall : Descriptive statistics
+
+```{r}
+# Calculer les statistiques descriptives pour chaque catégorie de la variable binaire "CC"
+stats_by_CC <- Corpus.CleanedNames.2 %>%
+  group_by(CC) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Median_Proportion_Female_Id = median(proportion_gender_female_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
+    Median_Proportion_Male_Id = median(proportion_gender_male_id, na.rm = TRUE)
+  )
+
+stats_by_CC
+```
+
+```{r}
+# Conversion en format long
+stats_long <- stats_by_CC %>%
+  pivot_longer(cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id),
+               names_to = "Gender",
+               values_to = "Proportion")
+
+ggplot(stats_long, aes(x = factor(CC), y = Proportion, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Female and Male Authors by CC Category",
+       x = "CC Category",
+       y = "Mean Proportion",
+       fill = "Gender") +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_minimal()
+```
+
+Interprétation : en moyenne, la proportion d'auteurs féminins dans les articles liés au changement climatique est légèrement plus faible que dans les articles non liés au changement climatique, avec des moyennes de 29,99% et 29,75% respectivement.
+En revanche, la proportion d'auteurs masculins est plus élevée dans les articles sur le changement climatique, avec une moyenne de 70,26%, comparativement à 70,06% pour les autres articles.
+
+##2.2.
+Climate change, category gender and number of articles
+
+```{r}
+stats_by_CC_category_gender <- Corpus.CleanedNames.2 %>%
+  group_by(CC, category_gender) %>%
+  summarize(nb_articles = n(), .groups = 'drop')
+
+stats_by_CC_category_gender
+```
+
+```{r}
+# Calculer la proportion des articles pour chaque combinaison de CC et category_gender
+stats_by_CC_category_gender <- stats_by_CC_category_gender %>%
+  group_by(CC) %>%
+  mutate(proportion_articles = nb_articles / sum(nb_articles))
+
+# Graphique
+ggplot(stats_by_CC_category_gender, aes(x = factor(CC), y = proportion_articles, fill = category_gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Articles by Collaboration Type and Climate Change Relevance",
+       x = "Climate Change Relevance (CC)",
+       y = "Proportion of Articles",
+       fill = "Collaboration Type") +
+  theme_minimal()
+```
+
+## 2.3 : Temporal evolution of the proportion of female authors by CC
+
+```{r}
+annual_stats_by_CC <- Corpus.CleanedNames.2 %>%
+  group_by(PY, CC) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+annual_stats_by_CC
+```
+
+```{r}
+ggplot(annual_stats_by_CC, aes(x = PY, y = Mean_Proportion_Female_Id, color = factor(CC))) +
+  geom_line(size = 1) +
+  labs(title = "Evolution of Mean Proportion of Female Authors Over Time",
+       x = "Publication Year",
+       y = "Mean Proportion of Female Authors",
+       color = "Climate Change Relevance (CC)") +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 1)) # Ajuster les limites de l'ordonnée pour aller de 0 à 1
+```
+
+Increase of female authors regarding climate change articles and decrase for non climate change related articles
+
+##3.Focus on Top5 and Top30 and on climte change
+
+```{r}
+# Calculer les statistiques descriptives pour chaque combinaison de catégorie de journaux et de la variable binaire "CC"
+stats_by_journal_CC <- Corpus.CleanedNames.2 %>%
+  group_by(TopFive, Top30, CC) %>%
+  summarize(
+    Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
+    Median_Proportion_Female_Id = median(proportion_gender_female_id, na.rm = TRUE),
+    Median_Proportion_Male_Id = median(proportion_gender_male_id, na.rm = TRUE),
+    Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
+  )
+stats_by_journal_CC
+```
+
+Moyenne et medianens différentes en raison des valeurs extrêmes (beaucoup d'articles où il n'y a pas de femmes / où il n'y a que des hommes)
+
+```{r}
+ggplot(Corpus.CleanedNames.2, aes(x = factor(Top30), y = proportion_gender_female_id)) +
+  geom_boxplot() +
+  labs(title = "Proportion of Female Authors in Top 30 Journals",
+       x = "Top 30 Journals",
+       y = "Mean Proportion of Female Authors") +
+  facet_wrap(~ CC, scales = "free")
+
+ggplot(Corpus.CleanedNames.2, aes(x = factor(Top30), y =proportion_gender_male_id)) +
+  geom_boxplot() +
+  labs(title = "Proportion of Male Authors in Top 30 Journals",
+       x = "Top 30 Journals",
+       y = "Mean Proportion of Female Authors") +
+  facet_wrap(~ CC, scales = "free")
+```
+
+Articles qui portent sur le CC : la proportion de femme dans le top 30 est beaucoup plus grande Articles qui portent sur le CC et qui ne sont pas dans le top 30 : mediane de la proportion de femmes un peu plus élevée
+
+## 2. Geography
+
+Affiliation data `C1`and `RP` variables.
+We'd like to identify each countries in which authors of the articles are affiliated.
+Thus, we'd like to create a variable "country" which list each country referenced in the `C1`and `RP`variables.
 
 ```{r}
 # table(Corpus$CC)
 table(Corpus.Short$CC)
 ```
 
-
 ## Citation data
 
 ### Clean citation data
-Prepare citation data. We want to create a database, where for each article (one raw in `Corpus`), we have a data frame with its cited articles. (one raw by references). We want to separate information on the authors of the cited articles, the title of the article, the year of publication, and the journal. 
+
+Prepare citation data.
+We want to create a database, where for each article (one raw in `Corpus`), we have a data frame with its cited articles.
+(one raw by references).
+We want to separate information on the authors of the cited articles, the title of the article, the year of publication, and the journal.
 
 First work with one of the datasource: let's say Wos.
 
 ```{r}
 gc()
-load(here(dir$prep.data,"Wos_Short.Rdata"))
+load(here(dir$raw.data,"Wos_Short.Rdata"))
 head(Wos.Econ.Short$CR)
 ```
 

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.0.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2024-11-06">
+
+<title>Quantifying interactions between economics of climate change, the rest of economics and other disciplines</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+<script src="QuantifCCEcon_files/libs/clipboard/clipboard.min.js"></script>
+<script src="QuantifCCEcon_files/libs/quarto-html/quarto.js"></script>
+<script src="QuantifCCEcon_files/libs/quarto-html/popper.min.js"></script>
+<script src="QuantifCCEcon_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="QuantifCCEcon_files/libs/quarto-html/anchor.min.js"></script>
+<link href="QuantifCCEcon_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="QuantifCCEcon_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="QuantifCCEcon_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="QuantifCCEcon_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="QuantifCCEcon_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Quantifying interactions between economics of climate change, the rest of economics and other disciplines</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p> </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">November 6, 2024</p>
+    </div>
+  </div>
+    
+  </div>
+  
+
+</header>
+
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>Gender disparities in scientific research remain a pressing issue, with significant impacts on the balanced development of the field. In particular, gender role positioning and educational restrictions continue to hinder equitable progress in scientific research. This study aims to provide a quantitative analysis of these gender disparities within the specific context of climate economics, considering various levels of journal prestige and types of collaborations.</p>
+<p>Previous research has delved into the broader issue of gender disparities in economics. For instance, David Card, Stefano Della Vigna, Patricia Funk, and Nagore Iriberri (2019), in their paper “Are Referees and Editors in Economics Gender Neutral?”, examined the role of gender in the evaluation of economic research. They highlighted that editorial decisions are not gender-neutral, with female-authored papers receiving more citations than their male-authored counterparts, suggesting that female researchers produce higher-quality work but face higher standards due to stereotype biases.</p>
+<p>Similarly, Junwan Liu, Yinglu Song, and Sai Yang (2019), in their paper “Gender Disparities in the Field of Economics,” analyzed gender disparities in terms of research output and influence across different countries, institutions, and journal levels. Their findings indicate a dominance of male authors in terms of research output and influence, with significant geographical variations. Their study also revealed that the output of both male and female authors decreases logarithmically with career age, while the influence of female authors tends to increase with longer careers due to higher qualifications.</p>
+<p>Building on these foundational studies, our research utilizes a larger and more diverse data set, drawing from the Web of Science database, which includes information on over 600,000 articles. Our analysis focuses on climate economics, aiming to uncover gender disparities by examining differences across journal levels and collaboration types. Specifically, we categorize journals into top five and top thirty tiers and analyze the degree of mixed-gender collaborations within these articles. Our objective is to validate and extend previous findings within the niche of climate economics, thereby contributing to the understanding of gender inequalities in this crucial area of research.</p>
+</section>
+<section id="data-cleaning-and-gender-assignment-algorithm" class="level2">
+<h2 class="anchored" data-anchor-id="data-cleaning-and-gender-assignment-algorithm">Data cleaning and gender assignment algorithm</h2>
+<p>To accurately assess gender disparities in scientific research, a rigorous data cleaning and gender assignment process is essential. This section outlines the methodology employed to clean the data set and assign gender probabilities to authors’ first names.</p>
+<section id="data-cleaning-process" class="level4">
+<h4 class="anchored" data-anchor-id="data-cleaning-process"><strong>Data Cleaning Process</strong></h4>
+<p>Initially, we considered a sample of 60,000 observations, focusing on articles with 15 authors or fewer, which constitute 99.95% of the data set. For each article, we extracted all authors’ names and first names. The cleaning process aimed to ensure compatibility with the “gender” package in R and involved several steps. We removed text in brackets, any letters followed by a period, and extraneous spaces at the beginning and end of names. In handling compound names, we retained only the first name and replaced all accents with their unaccented equivalents. These steps ensured that the first names were in a suitable format for gender identification.</p>
+</section>
+<section id="gender-assignment-algorithm" class="level4">
+<h4 class="anchored" data-anchor-id="gender-assignment-algorithm">Gender Assignment Algorithm</h4>
+<p>After cleaning the data, we utilized the “gender” package in R to assign gender probabilities to each first name, employing two methods: the “ssa” method, which uses data from the US Census List, and the “napp” method, which reallocates gender probabilities for names not identified by the “ssa” method. This dual-method approach resulted in a comprehensive data frame combining the results from both methods.</p>
+<p>We then developed an algorithm to assign a gender to each author’s first name, using three main databases: the final data frame from the previous gender probability assignment, a list of common Chinese first names, and lists of the top 10 male and female economists.</p>
+<p>First, if a first name appeared on the list of common Chinese names, the gender variable was set to “unknown.” If a first name matched the list of female economists, it was assigned “female.” Conversely, if a first name matched the list of male economists, it was assigned “male.” If a first name was not in the main data frame, the gender variable was set to missing. For recognized first names, if the probability of being male was greater than 90%, the name was assigned “male”; if less than 10%, it was assigned “female”; if between 10% and 90%, the gender was marked as “unknown.”</p>
+<p>Additionally, the algorithm created variables indicating the probability of each first name being male or female. If a first name appeared on the list of common Chinese names, both probabilities were set to missing. If a first name was on the list of female economists, the male probability was 0 and the female probability was 1. Conversely, if a first name was on the list of male economists, the male probability was 1 and the female probability was 0. If a first name was not in the main data frame, both probabilities were set to missing. If the first name was found and recognized as “male” or “female,” the respective probabilities were assigned accordingly.</p>
+<p>This comprehensive algorithm ensures a robust assignment of gender probabilities to each author’s first name, facilitating a detailed analysis of gender disparities in the field of climate economics. The rigorous data cleaning and algorithmic processes enhance the reliability of our findings, contributing to a deeper understanding of gender dynamics in scientific research.</p>
+<p>L’une des principales limites que nous avons notifié après la création des data frame assigannt une probabilité de genre aux prénoms des auteurs a été reprée lors d’un test pour savoir le nombre de prénoms uniques par rapport au nombre de prénoms correctement assignés : nous avons un peu plus d’1/3 des prénoms dont nous pouvons déterminer le genre à partir des méthodes SSA et NAPP, et 2/3 qui ne seront pas reconnus par cette méthode. Les prénoms qui ne sont pas appariés semblent être issus de cultures non occidentales. Ces prénoms sont assez rares et reviennent peu régulièrement dans les articles, ce qui affecte donc assez peu l'appariement. Cependant, ceci consitue une limite importante dans la mesure où nous ne sommes capables d’assigner une probabilité de genre seulement aux prénoms occidentaux, ce qui omet toute une partie de l’analyse pour les prénoms non occidentaux.<br>
+</p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    setTimeout(function() {
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      let href = ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const cites = ref.parentNode.getAttribute('data-cites').split(' ');
+    tippyHover(ref, function() {
+      var popup = window.document.createElement('div');
+      cites.forEach(function(cite) {
+        var citeDiv = window.document.createElement('div');
+        citeDiv.classList.add('hanging-indent');
+        citeDiv.classList.add('csl-entry');
+        var biblioDiv = window.document.getElementById('ref-' + cite);
+        if (biblioDiv) {
+          citeDiv.innerHTML = biblioDiv.innerHTML;
+        }
+        popup.appendChild(citeDiv);
+      });
+      return popup.innerHTML;
+    });
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
