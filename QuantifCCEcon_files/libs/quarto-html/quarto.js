@@ -6,6 +6,7 @@ const sectionChanged = new CustomEvent("quarto-sectionChanged", {
 });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 const layoutMarginEls = () => {
   // Find any conflicting margin elements and add margins to the
   // top to prevent overlap
@@ -54,6 +55,10 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
 window.document.addEventListener("DOMContentLoaded", function (_event) {
   const tocEl = window.document.querySelector('nav[role="doc-toc"]');
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
+=======
+window.document.addEventListener("DOMContentLoaded", function (_event) {
+  const tocEl = window.document.querySelector('nav[role="doc-toc"]');
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
   const sidebarEl = window.document.getElementById("quarto-sidebar");
   const leftTocEl = window.document.getElementById("quarto-sidebar-toc-left");
   const marginSidebarEl = window.document.getElementById(
@@ -81,9 +86,12 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   // fire slideEnter for tabby tab activations (for htmlwidget resize behavior)
   document.addEventListener("tabby", fireSlideEnter, false);
 
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
   // Track scrolling and mark TOC links as active
@@ -310,7 +318,10 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
   const manageSidebarVisiblity = (el, placeholderDescriptor) => {
     let isVisible = true;
 <<<<<<< HEAD
+<<<<<<< HEAD
     let elRect;
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 
@@ -324,17 +335,24 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
 
       if (lastChildEl) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
         // Find the top and bottom o the element that is being managed
         const elTop = el.offsetTop;
         const elBottom =
           elTop + lastChildEl.offsetTop + lastChildEl.offsetHeight;
 
+<<<<<<< HEAD
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
+=======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
         // Converts the sidebar to a menu
         const convertToMenu = () => {
           for (const child of el.children) {
             child.style.opacity = 0;
+<<<<<<< HEAD
 <<<<<<< HEAD
             child.style.overflow = "hidden";
           }
@@ -446,6 +464,8 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
             };
           });
 =======
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
             child.style.display = "none";
           }
 
@@ -543,6 +563,9 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
               closeToggle();
             }
           };
+<<<<<<< HEAD
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
+=======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
         };
 
@@ -551,7 +574,11 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
           for (const child of el.children) {
             child.style.opacity = 1;
 <<<<<<< HEAD
+<<<<<<< HEAD
             child.style.overflow = null;
+=======
+            clone.style.display = null;
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
             clone.style.display = null;
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
@@ -572,11 +599,14 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
           isVisible = false;
         } else {
 <<<<<<< HEAD
+<<<<<<< HEAD
           // Find the top and bottom o the element that is being managed
           const elTop = el.offsetTop;
           const elBottom =
             elTop + lastChildEl.offsetTop + lastChildEl.offsetHeight;
 
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
           if (!isVisible) {
@@ -599,6 +629,7 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
     };
   };
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   const tabEls = document.querySelectorAll('a[data-bs-toggle="tab"]');
   for (const tabEl of tabEls) {
@@ -645,6 +676,8 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
         });
     }
 =======
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
   // Find any conflicting margin elements and add margins to the
   // top to prevent overlap
   const marginChildren = window.document.querySelectorAll(
@@ -661,6 +694,9 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
     const marginTop = parseFloat(styles["marginTop"]);
 
     lastBottom = top + marginChild.getBoundingClientRect().height + marginTop;
+<<<<<<< HEAD
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
+=======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
   }
 
@@ -732,9 +768,14 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
   function toRegions(els) {
     return els.map((el) => {
 <<<<<<< HEAD
+<<<<<<< HEAD
       const boundRect = el.getBoundingClientRect();
       const top =
         boundRect.top +
+=======
+      const top =
+        el.getBoundingClientRect().top +
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
       const top =
         el.getBoundingClientRect().top +
@@ -748,6 +789,7 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
     });
   }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   let hasObserved = false;
   const visibleItemObserver = (els) => {
@@ -795,11 +837,16 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
         toRegions(leftElementObserver.getVisibleEntries())
       );
 =======
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
   const hideOverlappedSidebars = () => {
     marginScrollVisibility(toRegions(rightSideConflictEls));
     sidebarScrollVisiblity(toRegions(leftSideConflictEls));
     if (tocLeftScrollVisibility) {
       tocLeftScrollVisibility(toRegions(leftSideConflictEls));
+<<<<<<< HEAD
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
+=======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
     }
   };
@@ -823,6 +870,10 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
       manageTransition("quarto-sidebar", slow);
     };
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
@@ -873,9 +924,12 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
   let localReaderMode = null;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   const tocOpenDepthStr = tocEl?.getAttribute("data-toc-expanded");
   const tocOpenDepth = tocOpenDepthStr ? Number(tocOpenDepthStr) : 1;
 
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
   // Walk the TOC and collapse/expand nodes
@@ -904,6 +958,7 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
     // Process the collapse state if this is an UL
     if (el.tagName === "UL") {
 <<<<<<< HEAD
+<<<<<<< HEAD
       if (tocOpenDepth === -1 && depth > 1) {
         el.classList.add("collapse");
       } else if (
@@ -911,6 +966,9 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
         hasActiveChild ||
         prevSiblingIsActiveLink(el)
       ) {
+=======
+      if (depth === 1 || hasActiveChild || prevSiblingIsActiveLink(el)) {
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
       if (depth === 1 || hasActiveChild || prevSiblingIsActiveLink(el)) {
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
@@ -957,6 +1015,7 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
   highlightReaderToggle(isReaderMode());
 });
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 // grouped tabsets
 window.addEventListener("pageshow", (_event) => {
@@ -1053,6 +1112,8 @@ window.addEventListener("pageshow", (_event) => {
 
 =======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 function throttle(func, wait) {
   let waiting = false;
   return function () {
@@ -1066,9 +1127,12 @@ function throttle(func, wait) {
   };
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 function nexttick(func) {
   return setTimeout(func, 0);
 }
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139

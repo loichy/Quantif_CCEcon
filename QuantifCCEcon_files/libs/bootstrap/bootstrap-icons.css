@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 /*!
  * Bootstrap Icons v1.11.1 (https://icons.getbootstrap.com/)
  * Copyright 2019-2023 The Bootstrap Authors
@@ -11,10 +12,15 @@
   src: 
 url("./bootstrap-icons.woff?2820a3852bdb9a5832199cc61cec4e65") format("woff");
 =======
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 @font-face {
   font-family: "bootstrap-icons";
   src: 
 url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
+<<<<<<< HEAD
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
+=======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 }
 
@@ -455,6 +461,10 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-cloud-hail-fill::before { content: "\f2a3"; }
 .bi-cloud-hail::before { content: "\f2a4"; }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+.bi-cloud-haze-1::before { content: "\f2a5"; }
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 .bi-cloud-haze-1::before { content: "\f2a5"; }
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
@@ -1454,11 +1464,14 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-ear-fill::before { content: "\f688"; }
 .bi-ear::before { content: "\f689"; }
 <<<<<<< HEAD
+<<<<<<< HEAD
 .bi-envelope-check-fill::before { content: "\f68b"; }
 .bi-envelope-check::before { content: "\f68c"; }
 .bi-envelope-dash-fill::before { content: "\f68e"; }
 .bi-envelope-dash::before { content: "\f68f"; }
 =======
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 .bi-envelope-check-1::before { content: "\f68a"; }
 .bi-envelope-check-fill::before { content: "\f68b"; }
 .bi-envelope-check::before { content: "\f68c"; }
@@ -1466,19 +1479,28 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-envelope-dash-fill::before { content: "\f68e"; }
 .bi-envelope-dash::before { content: "\f68f"; }
 .bi-envelope-exclamation-1::before { content: "\f690"; }
+<<<<<<< HEAD
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
+=======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 .bi-envelope-exclamation-fill::before { content: "\f691"; }
 .bi-envelope-exclamation::before { content: "\f692"; }
 .bi-envelope-plus-fill::before { content: "\f693"; }
 .bi-envelope-plus::before { content: "\f694"; }
 <<<<<<< HEAD
+<<<<<<< HEAD
 .bi-envelope-slash-fill::before { content: "\f696"; }
 .bi-envelope-slash::before { content: "\f697"; }
 =======
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 .bi-envelope-slash-1::before { content: "\f695"; }
 .bi-envelope-slash-fill::before { content: "\f696"; }
 .bi-envelope-slash::before { content: "\f697"; }
 .bi-envelope-x-1::before { content: "\f698"; }
+<<<<<<< HEAD
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
+=======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 .bi-envelope-x-fill::before { content: "\f699"; }
 .bi-envelope-x::before { content: "\f69a"; }
@@ -1490,6 +1512,11 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-list-columns::before { content: "\f6a0"; }
 .bi-meta::before { content: "\f6a1"; }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+.bi-mortorboard-fill::before { content: "\f6a2"; }
+.bi-mortorboard::before { content: "\f6a3"; }
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 .bi-mortorboard-fill::before { content: "\f6a2"; }
 .bi-mortorboard::before { content: "\f6a3"; }
@@ -1513,6 +1540,10 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-send-dash-fill::before { content: "\f6b4"; }
 .bi-send-dash::before { content: "\f6b5"; }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+.bi-send-exclamation-1::before { content: "\f6b6"; }
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 .bi-send-exclamation-1::before { content: "\f6b6"; }
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
@@ -1528,6 +1559,10 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-send::before { content: "\f6c0"; }
 .bi-steam::before { content: "\f6c1"; }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+.bi-terminal-dash-1::before { content: "\f6c2"; }
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 .bi-terminal-dash-1::before { content: "\f6c2"; }
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
@@ -1561,6 +1596,10 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-usb::before { content: "\f6de"; }
 .bi-boombox-fill::before { content: "\f6df"; }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+.bi-displayport-1::before { content: "\f6e0"; }
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 .bi-displayport-1::before { content: "\f6e0"; }
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
@@ -1577,6 +1616,11 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-router-fill::before { content: "\f6eb"; }
 .bi-router::before { content: "\f6ec"; }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+.bi-ssd-fill::before { content: "\f6ed"; }
+.bi-ssd::before { content: "\f6ee"; }
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 .bi-ssd-fill::before { content: "\f6ed"; }
 .bi-ssd::before { content: "\f6ee"; }
@@ -1688,6 +1732,10 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-filetype-php::before { content: "\f757"; }
 .bi-filetype-png::before { content: "\f758"; }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+.bi-filetype-ppt-1::before { content: "\f759"; }
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 .bi-filetype-ppt-1::before { content: "\f759"; }
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
@@ -1707,6 +1755,10 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-filetype-wav::before { content: "\f767"; }
 .bi-filetype-woff::before { content: "\f768"; }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+.bi-filetype-xls-1::before { content: "\f769"; }
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 .bi-filetype-xls-1::before { content: "\f769"; }
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
@@ -1752,6 +1804,7 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-filetype-json::before { content: "\f791"; }
 .bi-filetype-pptx::before { content: "\f792"; }
 .bi-filetype-xlsx::before { content: "\f793"; }
+<<<<<<< HEAD
 <<<<<<< HEAD
 .bi-1-circle-fill::before { content: "\f796"; }
 .bi-1-circle::before { content: "\f797"; }
@@ -2135,5 +2188,7 @@ url("./bootstrap-icons.woff?524846017b983fc8ded9325d94ed40f3") format("woff");
 .bi-suitcase2-fill::before { content: "\f901"; }
 .bi-suitcase2::before { content: "\f902"; }
 .bi-vignette::before { content: "\f903"; }
+=======
+>>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
 =======
 >>>>>>> bd59d59d21433c1d46c5423a98733cba7b198139
