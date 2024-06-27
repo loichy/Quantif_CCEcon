@@ -693,40 +693,77 @@ Il est également possible de saisir le rôle du changement climatique (est-ce q
 
 -   TC : Web of Sciences Core Collection Times Cited Count.
 
+1. Analyse descriptive des données
+
+1.1.Analyse des valeurs manquantes
+
 ```{r}
+#TC: Web of Sciences Core Collection Times Cited Count.
 na_TC <- sum(is.na(Corpus.CleanedNames.2$TC))
 print(na_TC)
-```
+#8020 valeurs manquantes sur 1 136 055 soit seulement 0.7%.
 
-8020 valeurs manquantes sur 1 136 055 soit seulement 0.7%.
-
--   Z9 : Total Times Cited Count
-
-```{r}
+#Z9 : Total Times Cited Count
 na_Z9 <- sum(is.na(Corpus.CleanedNames.2$Z9))
 print(na_Z9)
-```
+#460 866 valeurs manquantes sur 1 136 055 soit 40.5%
 
-460 866 valeurs manquantes sur 1 136 055 soit 40.5%
-
--   U1 et U2 peuvent être des variables intéressantes mais je ne comprends pas vraiment à quoi elles font référence.U2 citations entre 2013 et 2023
-
-```{r}
+#U1 et U2.vU2 = citations entre 2013 et 2023
 na_U1 <- sum(is.na(Corpus.CleanedNames.2$U1))
 print(na_U1)
-```
-
-460 865 valeurs manquantes sur 1 136 055 soit 40.5%
-
-```{r}
+#460 865 valeurs manquantes sur 1 136 055 soit 40.5%
 na_U2 <- sum(is.na(Corpus.CleanedNames.2$U2))
 print(na_U2)
+#460866 valeurs manquantes sur 1 136 055 soit 40.5%
 ```
 
-460866 valeurs manquantes sur 1 136 055 soit 40.5%
+1.2.Statistiques descriptives
 
-Mêmes chiffres pour U1,U2 et Z9 donc il s'agit peut-être des mêmes articles à chaque fois dont les valeurs sont manquantes pour ces 3 variables.
-TC semble être la meilleure variable à utiliser étant donné son faible nombre de donnnées manquantes.
+```{r}
+moyenne_TC <- mean(Corpus.CleanedNames.2$TC, na.rm = TRUE)#sum
+ecart_type_TC <- sd(Corpus.CleanedNames.2$TC, na.rm = TRUE)
+valeur_min_TC <- min(Corpus.CleanedNames.2$TC, na.rm = TRUE)
+valeur_max_TC <- max(Corpus.CleanedNames.2$TC, na.rm = TRUE)
+mediane_TC <- median(Corpus.CleanedNames.2$TC, na.rm = TRUE)
+```
+
+```{r}
+resultats_TC <- list(
+  Moyenne = moyenne_TC,
+  Ecart_Type = ecart_type_TC,
+  Valeur_Minimum = valeur_min_TC,
+  Valeur_Maximum = valeur_max_TC,
+  Mediane = mediane_TC
+)
+
+print(resultats_TC)
+```
+
+Le nombre maximum de citations reçues par un article est de 999, lorsque le nombre minimum de citations reçue par un article est de 0.
+La médiane est de 2, signifiant qu'au moins 50% des articles ont reçu moins de 2 citations et 50% des articles ont reçu plus de 2 citations.
+L'écart type indique que les valeurs sont fortement dispersées autour de la moyenne. Il y a donc beaucoup d'articles avec beaucoup ou très peu de citations.
+
+```{r}
+# Créer un dataframe pour les statistiques et s'assurer que les valeurs sont numériques
+resultats_TC_df <- data.frame(
+  Statistique = c("Moyenne", "Médiane", "Min", "Max"),
+  Valeur = as.numeric(c(moyenne_TC, mediane_TC, valeur_min_TC, valeur_max_TC))
+)
+
+# Alternativement, créer un plot simple avec des points
+TC_graph <- ggplot(resultats_TC_df, aes(x = Statistique, y = Valeur)) +
+  geom_point(size = 4, color = "blue") +
+  geom_text(aes(label = round(Valeur, 2)), vjust = -1, size = 3.5) +
+  labs(title = "Statistiques descriptives de la variable TC",
+       x = "Statistique",
+       y = "Valeur") +
+  theme_minimal()
+
+# Afficher le graphique
+print(TC_graph)
+```
+
+Conclusion: TC semble être la meilleure variable à utiliser étant donné son faible nombre de donnnées manquantes.
 
 (ii) Lire les deux articles déposés sur la dropbox ([cliquer ici pour le lien](https://www.dropbox.com/scl/fo/jxx20i4cdgd4xnfhfm0na/ADxj_2rn9GVec03RiifhawA?rlkey=p8ps1t61v9jo9kan339uyv94c&dl=0)). L'article de Nature est très descriptif et possiblement en décalage (la question des premiers auteurs ne se posent pas en économie, car l'ordre des auteurs est quasi systématiquement l'ordre alphabétique). L'article dans la revue de sciences sociale est vraiment pas mal pour situer la question, et voir une approche (l'article fait aussi une bonne revue de litté qui peut être utile si tu cherches d'autres méthodes/références pour t'inspirer).
 
@@ -894,28 +931,12 @@ sample_data <- sample_data %>%
 ```
 
 ```{r}
-Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>%
-  mutate(PY = as.factor(PY),    # Effet fixe année=PY
-         SO = as.factor(SO))  # Effet fixe journal=SO
-```
-
-```{r}
 levels_count1 <- sample_data %>%
   summarise(PY_levels = n_distinct(TI),
             SO_levels = n_distinct(SO))
 
 print(levels_count1)
 ```
-
-```{r}
-levels_count <- Corpus.CleanedNames.2 %>%
-  summarise(PY_levels = n_distinct(PY),
-            SO_levels = n_distinct(SO))
-
-print(levels_count)
-```
-
-75 années différentes et 10 127 journaux différents.
 
 Citations et nombre de pages en numérique
 
@@ -924,64 +945,28 @@ sample_data$PG <- as.numeric(sample_data$PG)
 sample_data$TC <- as.numeric(sample_data$TC)
 ```
 
-```{r}
-Corpus.CleanedNames.2$PG <- as.numeric(Corpus.CleanedNames.2$PG)
-Corpus.CleanedNames.2$TC <- as.numeric(Corpus.CleanedNames.2$TC)
-```
-
 Régression des citations sur l'effet fixe année, l'effet fixe journal, la proportion d'auteurs identifiées comme femme, avec comme variables de contrôle le nombre d'auteurs et de page par article
 
 ```{r}
 model_1 <- lm(TC ~ SO + PY + proportion_gender_female_id + PG + nb_authors, data = sample_data)
-names(model_1$coefficients)
 
+#names(model_1$coefficients)
 model_1$coefficients[names(model_1$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
+#summary(model_1)
 ```
-
-```{r}
-#model1 <- lm(TC ~ SO + PY + proportion_gender_female_id + PG + nb_authors, data = Corpus.CleanedNames.2)
-#Erreur : vecteurs de mémoire épuisés (limite atteinte ?)
-```
-
-```{r}
-summary(model_1)
-```
-
-Interprétation coefficients:
-- Proportion de Femmes parmi les Auteurs (Estimate = 3.09736, SE = 0.77091)
-La proportion de femmes parmi les auteurs a un effet positif et significatif sur le nombre de citations. Une augmentation de 1 unité dans la proportion de femmes est associée à une augmentation de 3.10 citations (p < 0.001)
-- Nombre de Pages par Article (Estimate = 0.01771, SE = 0.01248)
-Le nombre de pages par article a un effet positif mais non significatif sur le nombre de citations (p > 0.05). Chaque page supplémentaire est associée à une augmentation de 0.018 citations.
-- Nombre d'Auteurs par Article (Estimate = 0.79084, SE = 0.23708)
-Le nombre d'auteurs a un effet positif et significatif sur le nombre de citations (p < 0.01). Chaque auteur supplémentaire est associé à une augmentation de 0.79 citations.
 
 ### Dummy Variable Regression
 
 ```{r}
 model = list()
 model$dummy <- lm(TC ~ proportion_gender_female_id + PG + nb_authors + factor(SO)+ factor(PY), data = sample_data)
-model$dummy$coefficients[names(model$dummy$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
 
-  
-library(stargazer)
-help(stargazer)
+#model$dummy$coefficients[names(model$dummy$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
 ```
 
 ```{r}
-summary(model$dummy)
-stargazer(model$dummy, 
-          type = "text",
-          keep = c(1,2,3)
-          )
+library(stargazer)
 ```
-
-Interprétation coefficients = très similaire à la régression précédente:
-- Proportion de Femmes parmi les Auteurs:Estimate: 3.0974/Std. Error: 0.7709
-Très significatif (p < 0.001). Cela suggère qu'une augmentation de la proportion d'auteurs féminins identifiés est associée à une augmentation du nombre de citations de l'article.Pour chaque augmentation de 1 unité (ou 100%) dans la proportion d'auteurs identifiés comme femme, le nombre de citations (TC) augmente en moyenne de 3.0974 citations.
-- Nombre de Pages par Article.Estimate: 0.0177/Std. Error: 0.0125
-Pour chaque page supplémentaire, le nombre de citations (TC) augmente en moyenne de 0.0177 citations. Cependant, cette relation n'est pas statistiquement significative.
-- Nombre d'Auteurs par Article:Estimate: 0.7908/Std. Error: 0.2371
-Très significatif (p < 0.001). Cela suggère qu'un nombre plus élevé d'auteurs est associé à un nombre plus élevé de citations de l'article.Pour chaque auteur supplémentaire, le nombre de citations (TC) augmente en moyenne de 0.7908 citations.
 
 ### The Within Transformation
 
@@ -1007,45 +992,48 @@ sample_data2 <- sample_data %>%
 ```
 
 ```{r}
-model$xsect <- lm(TC ~ proportion_gender_female_id + PG + nb_authors, data = sample_data2)
+model$xsect <- lm(TC ~ proportion_gender_female_id + PG + nb_authors, data = sample_data2) # modèle sans effet fixe
 model$demeaned <- lm(demeaned_TC ~ demeaned_prop + demeaned_PG + demeaned_nb_authors, data = sample_data2)
 ```
 
 ```{r}
 stargazer(model$xsect, 
           type = "text",
-          keep = c(1,2,3)
-          )
-stargazer(model$demeaned, 
-          type = "text",
-          keep = c(1,2,3)
-          )
-stargazer(model$dummy, 
-          type = "text",
-          keep = c(1,2,3)
-          )
-
-summary(model$demeaned)
+          keep = c(1,2,3))
 ```
 
-proportion_gender_female_id : Le coefficient estimé est positif mais non significatif = 0.23555 avec un écart type de 0.84075 donc la proportion d'auteurs identifiés comme femmes a un effet significatif sur le nombre de citations.
-
-PG (nombre de pages) : Le coefficient est de 0.03115 avec un écart type de 0.01327. Ce coefficient est significatif au niveau de 5% (p = 0.0189) donc une augmentation du nombre de pages est associée à une augmentation du nombre de citations.
-
-nb_authors (nombre d'auteurs) : Le coefficient est de -0.59259 avec un écart type de 0.24722. Ce coefficient est significatif au niveau de 5% (p = 0.0166) donc une augmentation du nombre d'auteurs est associée à une légère diminution du nombre de citations.
+Modèle sans effet fixe:
+- proportion_gender_female_id = coefficient négatif et significatif = -5.279 
+- PG = coefficient positif et significatif = 0.316
+- nb_authors = coefficient positif et significatif = 2.374
 
 ```{r}
-summary(model$demeaned)
+stargazer(model$demeaned, 
+          type = "text",
+          keep = c(1,2,3))
 ```
 
-Aucun résultat significatif
+Modèle de type within transformation 
+- proportion_gender_female_id = coefficient négatif et significatif = -5.769 
+- PG = coefficient positif et significatif = 0.552
+- nb_authors = coefficient positif et significatif = 0.208
+
+```{r}
+stargazer(model$dummy, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle de type dummy variable: 
+- proportion_gender_female_id = coefficient négatif et non significatif = -0.957 
+- PG = coefficient positif et significatif = 0.854
+- nb_authors = coefficient positif et significatif = 2.219
 
 ### Nouvelle méthode: plm
 
 ```{r}
 library(plm)
 ```
-
 
 ```{r}
 # incomplete_rows <- is.na(sample_data$PY)
@@ -1071,28 +1059,455 @@ model_plm = plm(formula = TC ~ proportion_gender_female_id + PG + nb_authors, # 
                        data = sample_data_panel, 
                        model = "within")
 stargazer(model_plm, type = "text")
-stargazer(model$dummy, type = "text", keep = c(1,2,3))
-stargazer(model$demeaned, type = "text", keep = c(1,2,3))
-coef(model_plm) # résumé des beta_chapeau,
-head(fixef(model_plm))
+```
+
+Modèle de type plm: 
+- proportion_gender_female_id = coefficient négatif et non significatif = -4.604 
+- PG = coefficient positif et significatif = 0.539
+- nb_authors = coefficient positif et significatif = 0.309
+
+Conclusion:
+- proportion_gender_female_id = le coefficient est toujours négatif selon toutes les méthodes. La  significativité dépend des méthodes.
+- PG = le coefficient est toujours positif  et significatif selon toutes les méthodes
+- nb_authors = le coefficient est toujours positif selon toutes les méthodes. La  significativité dépend des méthodes.
+
+To do list:
+Creuser les différences entre régression (Loic) 
+Visualisation/représentation (Loic)
+
+### Sous-échantillon des journaux
+
+```{r}
+# Prendre les 6000 premières lignes des données
+sample_data_top30 <- Corpus.CleanedNames.2 %>%
+  filter(Top30 == 1) %>%        # Garder seulement les articles du Top30 journaux
+  slice_sample(n = 6000) %>%    # Echantillonner 6000 articles
+  filter(!is.na(PY))            # Garder seulement les articles sans valeurs manquantes pour PY
+```
+
+Effet fixe en facteurs
+
+```{r}
+sample_data_top30 <- sample_data_top30 %>%
+  mutate(PY = as.factor(PY),    # Effet fixe année
+         SO = as.factor(SO))  # Effet fixe journal
+```
+
+Citations et nombre de pages en numérique
+
+```{r}
+sample_data_top30$PG <- as.numeric(sample_data_top30$PG)
+sample_data_top30$TC <- as.numeric(sample_data_top30$TC)
+```
+
+Régression des citations sur l'effet fixe année, l'effet fixe journal, la proportion d'auteurs identifiées comme femme, avec comme variables de contrôle le nombre d'auteurs et de page par article
+
+### Modèle de type dummy variable regression
+
+```{r}
+model_1_top30 <- lm(TC ~ SO + PY + proportion_gender_female_id + PG + nb_authors, data = sample_data_top30)
 ```
 
 ```{r}
-model_lsdv = lm(formula = TC ~ proportion_gender_female_id + PG + nb_authors + factor(PY) + factor(SO),
-                    data = sample_data) # commande lm: on précise le modèle que l'on estime. En incorporant factor(fips) on force lm à comprendre les modalités de la variables fips comme étant chacune une variable binaire dans le modèle (moyen rapide d'incorporer des variables binaires). 
-head(coef(model_lsdv)) # Pour seulement obtenir les coefficients estimés par les MCO
-
-# summary(est_model_lsdv) # Pour avoir le résumé entier de la régression (mais très long)
+model_top30 = list()
+model_top30$dummy <- lm(TC ~ proportion_gender_female_id + PG + nb_authors + factor(SO)+ factor(PY), data = sample_data_top30)
 ```
 
-Les coefficients et même le signe des coefficients n'est pas le même suivant les deux méthodes...
+```{r}
+model_1_top30$coefficients[names(model_1_top30$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
+```
 
-To do list:
-Analyse descriptive des données
-Creuser les différences entre régression (Loic) 
-Visualisation/représentation (Loic)
-Sous-échantillon des journaux
-TC/Age sans effet fixe
+```{r}
+stargazer(model_top30$dummy, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle de type dummy variable: 
+- proportion_gender_female_id = coefficient est désormais positif et non significatif = 5.590 
+- PG = coefficient positif et significatif = 2.298
+- nb_authors = coefficient positif et significatif = 5.233
+
+### The Within Transformation
+
+```{r}
+sample_data_top30_2 <- sample_data_top30 %>%
+  group_by(SO) %>%
+  mutate(mean_TC = mean(TC, na.rm=T),
+         mean_prop = mean(proportion_gender_female_id, na.rm=T),
+         mean_PG = mean(PG, na.rm=T),
+         mean_nb_authors = mean(nb_authors, na.rm=T)) %>%
+  ungroup() %>%
+  group_by(PY) %>% 
+    mutate(mean_PY_TC = mean(TC, na.rm=T),
+         mean_PY_prop = mean(proportion_gender_female_id, na.rm=T),
+         mean_PY_PG = mean(PG, na.rm=T),
+         mean_PY_nb_authors = mean(nb_authors, na.rm=T)) %>%
+  ungroup() %>% 
+  mutate(demeaned_TC = TC - mean_TC - mean_PY_TC + mean(TC, na.rm=T),
+         demeaned_prop = proportion_gender_female_id - mean_prop - mean_PY_prop + mean(proportion_gender_female_id, na.rm = T),
+         demeaned_PG = PG - mean_PG - mean_PY_PG + mean(PG, na.rm=T),
+         demeaned_nb_authors = nb_authors - mean_nb_authors - mean_PY_nb_authors + mean(nb_authors, na.rm=T)
+         )
+```
+
+```{r}
+model_top30$xsect <- lm(TC ~ proportion_gender_female_id + PG + nb_authors, data = sample_data_top30_2) # modèle sans effet fixe
+```
+
+```{r}
+model_top30$demeaned <- lm(demeaned_TC ~ demeaned_prop + demeaned_PG + demeaned_nb_authors, data = sample_data_top30_2)
+```
+
+```{r}
+stargazer(model_top30$xsect, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle sans effet fixe:
+- proportion_gender_female_id = coefficient fortement négatif et significatif = -15.870
+- PG = coefficient positif et significatif = 1.827
+- nb_authors = coefficient négatif et significatif = -4.208
+
+```{r}
+stargazer(model_top30$demeaned, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle de type within transformation 
+- proportion_gender_female_id = coefficient positif et non significatif =  0.331  
+- PG = coefficient positif et significatif = 1.818
+- nb_authors = coefficient positif et non significatif = 1.329
+
+Transformer sample_data_top30 en un objet `panel data frame`
+
+```{r}
+# Transformons data 1 en un objet `panel data frame`
+sample_data_panel_top30 <- pdata.frame(sample_data_top30, index = c("SO", "PY"))
+pdim(sample_data_panel_top30)
+head(index(sample_data_panel_top30))
+```
+
+Effectuons la régression à l'aide de la commande plm, sans effet fixe
+
+```{r}
+model_plm_top30 = plm(formula = TC ~ proportion_gender_female_id + PG + nb_authors, # Formule du modèle estimé
+                       data = sample_data_panel_top30 , 
+                       model = "within")
+stargazer(model_plm_top30, type = "text")
+```
+
+Modèle de type plm: 
+- proportion_gender_female_id = coefficient négatif et non significatif = -6.129 
+- PG = coefficient positif et significatif = 1.524
+- nb_authors = coefficient positif et significatif = 0.132
+
+Conclusion:
+- proportion_gender_female_id est désormais positif alors qu'il était négatif
+
+### Articles qui portent sur le CC vs articles qui ne portent pas sur le CC
+
+#### Articles qui portent sur le CC 
+
+```{r}
+# Prendre les 6000 premières lignes des données
+sample_data_CC <- Corpus.CleanedNames.2 %>%
+  filter(CC == 1) %>%        # Garder seulement les articles du Top30 journaux
+  slice_sample(n = 6000) %>%    # Echantillonner 6000 articles
+  filter(!is.na(PY))            # Garder seulement les articles sans valeurs manquantes pour PY
+```
+
+Effet fixe en facteurs
+
+```{r}
+sample_data_CC<- sample_data_CC %>%
+  mutate(PY = as.factor(PY),    # Effet fixe année
+         SO = as.factor(SO))  # Effet fixe journal
+```
+
+Citations et nombre de pages en numérique
+
+```{r}
+sample_data_CC$PG <- as.numeric(sample_data_CC$PG)
+sample_data_CC$TC <- as.numeric(sample_data_CC$TC)
+```
+
+Régression des citations sur l'effet fixe année, l'effet fixe journal, la proportion d'auteurs identifiées comme femme, avec comme variables de contrôle le nombre d'auteurs et de page par article
+
+### Modèle de type dummy variable regression
+
+```{r}
+model_1_CC <- lm(TC ~ SO + PY + proportion_gender_female_id + PG + nb_authors, data = sample_data_CC)
+```
+
+```{r}
+model_CC = list()
+model_CC$dummy <- lm(TC ~ proportion_gender_female_id + PG + nb_authors + factor(SO)+ factor(PY), data = sample_data_CC)
+```
+
+```{r}
+model_1_CC $coefficients[names(model_1_CC$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
+```
+
+```{r}
+stargazer(model_CC$dummy, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle de type dummy variable: 
+- proportion_gender_female_id = coefficient négatif et non significatif = -3.036
+- PG = coefficient positif et non significatif = 0.045
+- nb_authors = coefficient positif et significatif = 1.830
+
+### The Within Transformation
+
+```{r}
+sample_data_CC_2 <- sample_data_CC %>%
+  group_by(SO) %>%
+  mutate(mean_TC = mean(TC, na.rm=T),
+         mean_prop = mean(proportion_gender_female_id, na.rm=T),
+         mean_PG = mean(PG, na.rm=T),
+         mean_nb_authors = mean(nb_authors, na.rm=T)) %>%
+  ungroup() %>%
+  group_by(PY) %>% 
+    mutate(mean_PY_TC = mean(TC, na.rm=T),
+         mean_PY_prop = mean(proportion_gender_female_id, na.rm=T),
+         mean_PY_PG = mean(PG, na.rm=T),
+         mean_PY_nb_authors = mean(nb_authors, na.rm=T)) %>%
+  ungroup() %>% 
+  mutate(demeaned_TC = TC - mean_TC - mean_PY_TC + mean(TC, na.rm=T),
+         demeaned_prop = proportion_gender_female_id - mean_prop - mean_PY_prop + mean(proportion_gender_female_id, na.rm = T),
+         demeaned_PG = PG - mean_PG - mean_PY_PG + mean(PG, na.rm=T),
+         demeaned_nb_authors = nb_authors - mean_nb_authors - mean_PY_nb_authors + mean(nb_authors, na.rm=T)
+         )
+```
+
+```{r}
+model_CC$xsect <- lm(TC ~ proportion_gender_female_id + PG + nb_authors, data = sample_data_CC_2) # modèle sans effet fixe
+```
+
+```{r}
+model_CC$demeaned <- lm(demeaned_TC ~ demeaned_prop + demeaned_PG + demeaned_nb_authors, data = sample_data_CC_2)
+```
+
+```{r}
+stargazer(model_CC$xsect, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle sans effet fixe:
+- proportion_gender_female_id = coefficient fortement négatif et significatif = -9.073
+- PG = coefficient négatif et significatif =  -0.290
+- nb_authors = coefficient positif et significatif = 1.532
+
+```{r}
+stargazer(model_CC$demeaned, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle de type within transformation 
+- proportion_gender_female_id = coefficient négatif et significatif =  -4.816  
+- PG = coefficient négatif et non significatif = -0.008 
+- nb_authors = coefficient positif et significatif = 0.995
+
+Transformer sample_data_CC en un objet `panel data frame`
+
+```{r}
+# Transformons data 1 en un objet `panel data frame`
+sample_data_panel_CC <- pdata.frame(sample_data_CC, index = c("SO", "PY"))
+pdim(sample_data_panel_CC)
+head(index(sample_data_panel_CC))
+```
+
+Effectuons la régression à l'aide de la commande plm, sans effet fixe
+
+```{r}
+model_plm_CC = plm(formula = TC ~ proportion_gender_female_id + PG + nb_authors, # Formule du modèle estimé
+                       data = sample_data_panel_CC , 
+                       model = "within")
+stargazer(model_plm_CC, type = "text")
+```
+
+Modèle de type plm: 
+- proportion_gender_female_id = coefficient négatif et significatif = -7.498 
+- PG = coefficient négatif et non significatif = -0.073
+- nb_authors = coefficient positif et significatif = 0.586
+
+#### Articles qui ne portent pas sur le CC 
+
+```{r}
+# Prendre les 6000 premières lignes des données
+sample_data_noCC <- Corpus.CleanedNames.2 %>%
+  filter(CC == 0) %>%        # Garder seulement les articles du Top30 journaux
+  slice_sample(n = 6000) %>%    # Echantillonner 6000 articles
+  filter(!is.na(PY))            # Garder seulement les articles sans valeurs manquantes pour PY
+```
+
+Effet fixe en facteurs
+
+```{r}
+sample_data_noCC <- sample_data_noCC %>%
+  mutate(PY = as.factor(PY),    # Effet fixe année
+         SO = as.factor(SO))  # Effet fixe journal
+```
+
+Citations et nombre de pages en numérique
+
+```{r}
+sample_data_noCC$PG <- as.numeric(sample_data_noCC$PG)
+sample_data_noCC$TC <- as.numeric(sample_data_noCC$TC)
+```
+
+Régression des citations sur l'effet fixe année, l'effet fixe journal, la proportion d'auteurs identifiées comme femme, avec comme variables de contrôle le nombre d'auteurs et de page par article
+
+### Modèle de type dummy variable regression
+
+```{r}
+model_1_noCC <- lm(TC ~ SO + PY + proportion_gender_female_id + PG + nb_authors, data = sample_data_noCC)
+```
+
+```{r}
+model_noCC = list()
+model_noCC$dummy <- lm(TC ~ proportion_gender_female_id + PG + nb_authors + factor(SO)+ factor(PY), data = sample_data_noCC)
+```
+
+```{r}
+model_1_noCC $coefficients[names(model_1_noCC$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
+```
+
+```{r}
+stargazer(model_noCC$dummy, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle de type dummy variable: 
+- proportion_gender_female_id = coefficient négatif et non significatif = -1.736
+- PG = coefficient positif et significatif = 0.718
+- nb_authors = coefficient positif et significatif = 2.838
+
+### The Within Transformation
+
+```{r}
+sample_data_noCC_2 <- sample_data_noCC %>%
+  group_by(SO) %>%
+  mutate(mean_TC = mean(TC, na.rm=T),
+         mean_prop = mean(proportion_gender_female_id, na.rm=T),
+         mean_PG = mean(PG, na.rm=T),
+         mean_nb_authors = mean(nb_authors, na.rm=T)) %>%
+  ungroup() %>%
+  group_by(PY) %>% 
+    mutate(mean_PY_TC = mean(TC, na.rm=T),
+         mean_PY_prop = mean(proportion_gender_female_id, na.rm=T),
+         mean_PY_PG = mean(PG, na.rm=T),
+         mean_PY_nb_authors = mean(nb_authors, na.rm=T)) %>%
+  ungroup() %>% 
+  mutate(demeaned_TC = TC - mean_TC - mean_PY_TC + mean(TC, na.rm=T),
+         demeaned_prop = proportion_gender_female_id - mean_prop - mean_PY_prop + mean(proportion_gender_female_id, na.rm = T),
+         demeaned_PG = PG - mean_PG - mean_PY_PG + mean(PG, na.rm=T),
+         demeaned_nb_authors = nb_authors - mean_nb_authors - mean_PY_nb_authors + mean(nb_authors, na.rm=T)
+         )
+```
+
+```{r}
+model_noCC$xsect <- lm(TC ~ proportion_gender_female_id + PG + nb_authors, data = sample_data_noCC_2) # modèle sans effet fixe
+```
+
+```{r}
+model_noCC$demeaned <- lm(demeaned_TC ~ demeaned_prop + demeaned_PG + demeaned_nb_authors, data = sample_data_noCC_2)
+```
+
+```{r}
+stargazer(model_noCC$xsect, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle sans effet fixe:
+- proportion_gender_female_id = coefficient fortement négatif et significatif = -6.049
+- PG = coefficient positif et significatif =  0.461
+- nb_authors = coefficient positif et significatif = 2.366
+
+```{r}
+stargazer(model_noCC$demeaned, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle de type within transformation 
+- proportion_gender_female_id = coefficient négatif et significatif =  -5.639  
+- PG = coefficient positif et significatif = 0.690 
+- nb_authors = coefficient positif et non significatif = 0.606
+
+Transformer sample_data_CC en un objet `panel data frame`
+
+```{r}
+# Transformons data 1 en un objet `panel data frame`
+sample_data_panel_noCC <- pdata.frame(sample_data_noCC, index = c("SO", "PY"))
+pdim(sample_data_panel_noCC)
+head(index(sample_data_panel_noCC))
+```
+
+Effectuons la régression à l'aide de la commande plm, sans effet fixe
+
+```{r}
+model_plm_noCC = plm(formula = TC ~ proportion_gender_female_id + PG + nb_authors, # Formule du modèle estimé
+                       data = sample_data_panel_noCC , 
+                       model = "within")
+stargazer(model_plm_noCC, type = "text")
+```
+
+Modèle de type plm: 
+- proportion_gender_female_id = coefficient négatif et significatif = -7.498 
+- PG = coefficient négatif et non significatif = -0.073
+- nb_authors = coefficient positif et significatif = 0.586
+
+### TC/Age sans effet fixe
+
+```{r}
+# Prendre les 6000 premières lignes des données
+sample_data_tc_age <- Corpus.CleanedNames.2 %>% 
+  slice_sample(n = 6000) %>% 
+  filter(!is.na(PY))
+```
+
+```{r}
+sample_data_tc_age$TC <- as.numeric(sample_data_tc_age$TC)
+```
+
+```{r}
+sample_data_tc_age$age <- 2024 - sample_data_tc_age$PY
+sample_data_tc_age$PG <- as.numeric(sample_data_tc_age$PG)
+```
+
+```{r}
+sample_data_tc_age$tc_age <- sample_data_tc_age$TC / sample_data_tc_age$age
+```
+
+Régression des citations sur la proportion d'auteurs identifiées comme femme, avec comme variables de contrôle le nombre d'auteurs et de page par article
+
+### Modèle sans effet fixe
+
+```{r}
+model_tc_age = list()
+model_tc_age$dummy <- lm(TC ~ proportion_gender_female_id + PG + nb_authors, data = sample_data_tc_age)
+```
+
+```{r}
+stargazer(model_tc_age$dummy, 
+          type = "text",
+          keep = c(1,2,3))
+```
+
+Modèle sans effet fixe:
+- proportion_gender_female_id = coefficient fortement négatif et significatif = -8.229
+- PG = coefficient positif et significatif =  0.404
+- nb_authors = coefficient positif et significatif = 2.867
 
 ## Analyse par pays
 
@@ -1260,16 +1675,16 @@ sample_data_with_countries <- count_country_occurrences(sample_data_with_countri
 ```{r}
 # Remplacer les valeurs "integer(0)" par NA dans la colonne C1
 # Remplacer les valeurs integer(0) par NA dans la colonne C1
-# sample_data_with_countries$country_counts <- lapply(sample_data_with_countries$country_counts, function(x) {
-#   if (length(x) == 0) {
-#     return(NA)
-#   } else {
-#     return(x)
-#   }
-# })
+sample_data_with_countries$country_counts <- lapply(sample_data_with_countries$country_counts, function(x) {
+  if (length(x) == 0) {
+    return(NA)
+  } else {
+    return(x)
+  }
+})
 
 # Convertir la liste en vecteur de caractères si nécessaire
-# sample_data_with_countries$country_counts <- unlist(sample_data_with_countries$country_counts)
+sample_data_with_countries$country_counts <- unlist(sample_data_with_countries$country_counts)
 ```
 
 
