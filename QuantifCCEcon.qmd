@@ -880,7 +880,9 @@ library(lmtest)
 
 ```{r}
 # Prendre les 6000 premières lignes des données
-sample_data <- Corpus.CleanedNames.2 %>% slice(1:6000)
+sample_data <- Corpus.CleanedNames.2 %>% 
+  slice_sample(n = 6000) %>% 
+  filter(!is.na(PY))
 ```
 
 Effet fixe en facteurs
@@ -931,6 +933,9 @@ Régression des citations sur l'effet fixe année, l'effet fixe journal, la prop
 
 ```{r}
 model_1 <- lm(TC ~ SO + PY + proportion_gender_female_id + PG + nb_authors, data = sample_data)
+names(model_1$coefficients)
+
+model_1$coefficients[names(model_1$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
 ```
 
 ```{r}
@@ -955,10 +960,19 @@ Le nombre d'auteurs a un effet positif et significatif sur le nombre de citation
 ```{r}
 model = list()
 model$dummy <- lm(TC ~ proportion_gender_female_id + PG + nb_authors + factor(SO)+ factor(PY), data = sample_data)
+model$dummy$coefficients[names(model$dummy$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
+
+  
+library(stargazer)
+help(stargazer)
 ```
 
 ```{r}
 summary(model$dummy)
+stargazer(model$dummy, 
+          type = "text",
+          keep = c(1,2,3)
+          )
 ```
 
 Interprétation coefficients = très similaire à la régression précédente:
@@ -974,14 +988,22 @@ Très significatif (p < 0.001). Cela suggère qu'un nombre plus élevé d'auteur
 ```{r}
 sample_data2 <- sample_data %>%
   group_by(SO) %>%
-  mutate(mean_TC = mean(TC),
-         mean_prop = mean(proportion_gender_female_id),
-         mean_PG = mean(PG),
-         mean_nb_authors = mean(nb_authors)) %>%
-  mutate(demeaned_TC = TC - mean_TC,
-         demeaned_prop = proportion_gender_female_id - mean_prop,
-         demeaned_PG = PG - mean_PG,
-         demeaned_nb_authors = nb_authors - mean_nb_authors)
+  mutate(mean_TC = mean(TC, na.rm=T),
+         mean_prop = mean(proportion_gender_female_id, na.rm=T),
+         mean_PG = mean(PG, na.rm=T),
+         mean_nb_authors = mean(nb_authors, na.rm=T)) %>%
+  ungroup() %>%
+  group_by(PY) %>% 
+    mutate(mean_PY_TC = mean(TC, na.rm=T),
+         mean_PY_prop = mean(proportion_gender_female_id, na.rm=T),
+         mean_PY_PG = mean(PG, na.rm=T),
+         mean_PY_nb_authors = mean(nb_authors, na.rm=T)) %>%
+  ungroup() %>% 
+  mutate(demeaned_TC = TC - mean_TC - mean_PY_TC + mean(TC, na.rm=T),
+         demeaned_prop = proportion_gender_female_id - mean_prop - mean_PY_prop + mean(proportion_gender_female_id, na.rm = T),
+         demeaned_PG = PG - mean_PG - mean_PY_PG + mean(PG, na.rm=T),
+         demeaned_nb_authors = nb_authors - mean_nb_authors - mean_PY_nb_authors + mean(nb_authors, na.rm=T)
+         )
 ```
 
 ```{r}
@@ -990,7 +1012,20 @@ model$demeaned <- lm(demeaned_TC ~ demeaned_prop + demeaned_PG + demeaned_nb_aut
 ```
 
 ```{r}
-summary(model$xsect)
+stargazer(model$xsect, 
+          type = "text",
+          keep = c(1,2,3)
+          )
+stargazer(model$demeaned, 
+          type = "text",
+          keep = c(1,2,3)
+          )
+stargazer(model$dummy, 
+          type = "text",
+          keep = c(1,2,3)
+          )
+
+summary(model$demeaned)
 ```
 
 proportion_gender_female_id : Le coefficient estimé est positif mais non significatif = 0.23555 avec un écart type de 0.84075 donc la proportion d'auteurs identifiés comme femmes a un effet significatif sur le nombre de citations.
@@ -1013,8 +1048,9 @@ library(plm)
 
 
 ```{r}
-incomplete_rows <- is.na(sample_data$PY)
-sample_data_clean <- sample_data[!incomplete_rows, ]
+# incomplete_rows <- is.na(sample_data$PY)
+sample_data_clean <- sample_data
+#[!incomplete_rows, ]
 ```
 
 Transformer sample_data en un objet `panel data frame`
@@ -1034,7 +1070,10 @@ Effectuons la régression à l'aide de la commande plm, sans effet fixe
 model_plm = plm(formula = TC ~ proportion_gender_female_id + PG + nb_authors, # Formule du modèle estimé 
                        data = sample_data_panel, 
                        model = "within")
-coef(model_plm) # résumé des beta_chapeau
+stargazer(model_plm, type = "text")
+stargazer(model$dummy, type = "text", keep = c(1,2,3))
+stargazer(model$demeaned, type = "text", keep = c(1,2,3))
+coef(model_plm) # résumé des beta_chapeau,
 head(fixef(model_plm))
 ```
 
@@ -1048,7 +1087,19 @@ head(coef(model_lsdv)) # Pour seulement obtenir les coefficients estimés par le
 
 Les coefficients et même le signe des coefficients n'est pas le même suivant les deux méthodes...
 
+To do list:
+Analyse descriptive des données
+Creuser les différences entre régression (Loic) 
+Visualisation/représentation (Loic)
+Sous-échantillon des journaux
+TC/Age sans effet fixe
+
 ## Analyse par pays
+
+To do:
+Gérer la sortie de l'algorithme pour faciliter l'aggrégation
+Envisager les multiples orthographes des noms de pays
+Pouvoir regrouper par région du monde
 
 Nous avons la colonne des affiliations d'auteur C1.
 Cette colonne a différents formats possibles, elle dit pour chaque auteur son (ses) affiliations (un auteur peut avoir plusieurs affiliations, et deux auteurs peuvent avoir la même affiliation).
@@ -1062,6 +1113,7 @@ Puis faire des variables pour tous les pays cités par article (comme le nombre 
 
 ```{r}
 library(countries)
+temp <- countries::country_reference_list
 country_list <- as.vector(countries::country_reference_list$simple)
 country_list
 ```
@@ -1128,6 +1180,8 @@ library(tidyverse)
     #extra = "merge",
     #token = ", "
   #)
+
+
 ```
 
 
@@ -1196,6 +1250,8 @@ count_country_occurrences <- function(data, country_columns) {
   
   return(data)
 }
+
+str_detect
 
 # Appeler la fonction pour mettre à jour les données avec les comptages par pays
 sample_data_with_countries <- count_country_occurrences(sample_data_with_countries, country_columns)
