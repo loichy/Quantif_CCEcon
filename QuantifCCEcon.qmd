@@ -354,7 +354,7 @@ conventions in this region. See for example:
 # Check authors that have written more than 10 articles:
 authors_with10articlesormore <- authors_df %>% 
   filter(n_articles>9)
-authors_with10articlesormore %>%  
+head(authors_with10articlesormore) %>%  
   kbl(digits = 3) %>%
   kable_classic_2(full_width = F, html_font = "helvetica")
 ```
