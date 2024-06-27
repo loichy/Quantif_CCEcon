@@ -23,7 +23,7 @@ gc()
 
 # Load package
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere, stringr, gender, genderdata, stringi, dplyr, tidyr, genderizeR)
+pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere, stringr, gender, genderdata, stringi, dplyr, tidyr, genderizeR, kableExtra)
 
 # List directories 
 dir <- list()
@@ -105,9 +105,9 @@ data set and assign gender probabilities to authors' first names. -->
 ### Data Preparation
 
 From our corpus of articles from Web of Science and Scopus published in
-peer-reviewed journals in English (about 1.2 million articles), we restrict our
+peer-reviewed journals in English (about 1.1 million articles), we restrict our
 sample to articles with at maximum 15 authors, which constitute 99.95% of the
-data set. For each article, we extracted in our initial data base all authors'
+data set. For each article, our database gives us all authors'
 full names, names and first names. The first stage of the cleaning process aimed
 to homogeneize the character encoding. This step ensures that author full names
 and first name has the same character encoding as the list of authors full
@@ -127,57 +127,114 @@ suitable format for gender identification.
 
 ### Algorithm to identify author's gender
 
-After cleaning the data, we utilized the "gender" package in R to associate a gender and gender probabilities to any first name.
-To do so, we first create functions that compute gender probability for a given first name employing two methods: the "ssa" method, which uses data from the US Census List, and the "napp" method, which reallocates gender probabilities for names not identified by the "ssa" method.
-This dual-method approach resulted in a comprehensive data frame combining the results from both methods and giving, for each unique first name, the probability for the name to be female and male.
-This data frame finally gives all first names that for which we have an assigned gender probability.
+<!-- I think we can improve our description of the alogrithm -->
 
-We then developed an algorithm to assign a gender to each author's first name, using four main databases: the final data frame from the previous gender probability assignment, a list of common Chinese first names, and lists of the top 10 male and female economists.
-This algorithm allows to create three new variables : a variable which attributes a gender to each first name and variables that give the probability for the first name to be male or female.
+We develop an algorithm to identify gender to each author. The decision steps
+are the following. First, we set as `unknown` the gender of every author with
+first name within the list of common chinese first name (see [Wikipedia page for
+a list of common chinese first
+names](https://en.wikipedia.org/wiki/Chinese_given_name), and develop the reason
+later). Second, for authors with a non-chinese firstname, we check whether their
+full name is in the list of the top 10% of female economists build by REPEC (see
+[link here](https://ideas.repec.org/top/top.women.html)). If so, the author is
+identified as female, if not we check whether the author's full name is in the
+list of the top 10% of male economists of REPEC. If so, the author is identified
+as male.
+In the case where the author's full name is not in the list of the top 10% lists
+of female and male economists, we use the author's first name to identify their
+gender. The principle is the following. We use the `gender` package which
+provides for a large number of first name, the proportion in a given population
+of male and female with the given name. In our analysis, we use this proportion
+as a probability that the given author is male or female. The proportion of male
+and femae author is retrieved by the `gender` package using the "ssa" method,
+which uses data from the US Census List which existing first name in the US the
+proportion of male and female. We complement this approach with the "napp"
+method, which adds gender probabilities for first names not identified by the
+"ssa" method (which are mostly nordic and german first names).
+Thus, for each author's first name for which we have a gender proportion using
+the `gender` package we assign them to a gender if the gender proportion of
+their first name is above 90%. When the proportion is below, we classify their
+first name as `unknown`, and if we don't have gender proportion associated to
+their first name, we set their gender as missing.
 
-For the gender variable, the algorithm uses several conditional steps.
-This variable can take value NA, unknown, male or female.
-We first focus on the full name for each author in the algorithm to define the variable gender.
-If the full name is missing in our initial data base, the gender variable is set to NA.
-Otherwise, if the full name is in the list of top 10% of female economists, gender is set to female.
-Reciprocally, if full name is in the list of top 10% of male economists, gender is set to male.
-Then, we treat first name for each author in the algorithm to define the variable gender.
-If first name is missing in our initial data base, gender variable is set to NA.
-If first name is in the list of common chinese first name, gender is set to "unknown".
-If first name is absent from the list of first names with measured gender probability (absent from the data frame that we created during the prevous step), gender is set to "unknown".
-For recognized first names, if the probability of being male in this list was greater than 90%, the name was assigned "male"; if less than 10%, it was assigned "female"; if between 10% and 90%, the gender was marked as "undecided".
+As a summary, our gender variable can take five values: NA, unknown, male,
+female or undecided. The gender is missing if the author's first name is not
+referenced in the list of first names of the `gender`package. The gender is
+unknown if the author's first name is a common chinese first name. The gender is
+undecided when the the probability of the first name to be male is between 10%
+and 90%. The gender is male if the author full name is in the list of the top
+10% of male economists, or when its first name has a proportion to be male
+larger than 90% according to the `gender` package. The gender is female when the
+author's full name is in the list of the top 10% of female economists or when
+the first name has a proportion to be male smaller than 10% according to the
+`gender` package.
 
-Additionally, the algorithm created variables indicating the probability of each first name being male or female, only if gender is assigned.
-These variables are varying between 0 and 1 or take value NA.
-As for the gender variable, the algorithm first treat full names for each author and then first names.
-If the full name is missing from our initial data base, both probabilities are set to NA.
-If the full name is is the list of top 10% of female economists, the probability for the first name to be female is set to 1 and 0 for male.
-Reciprocally, if the full name is in the list of top 10% of male economists, the probability for the first name to be female is set to 0 and 1 for male.
-Then, we treat first name for each author in the algorithm to define probabilities gender.
-If a first name is missing from our initial data base, both probabilities were set to NA.
-If a first name appeared on the list of common Chinese names, both probabilities were also set to NA.
-If first name is absent from the list of first names with measured gender probability (absent from the data frame that we created during the previous step), both probabilities were set to NA.
-If the first name was found and recognized as "male" or "female," the respective probabilities were assigned accordingly from the data frame assigning gender probabilities.
+Additionally, the algorithm created variables indicating the probability of each
+first name being male or female, only if gender is assigned. These variables are
+varying between 0 and 1 or take value NA. On aggregate, to count authors by
+gender, we sum this probability to account for the fact that our gender
+identification strategy contains some approximation.
 
-This comprehensive algorithm ensures a robust assignment of gender probabilities to each author's first name, facilitating a detailed analysis of gender disparities in the field of climate economics.
+This comprehensive algorithm limits mistakes in our gender assignment to each
+author. <!-- facilitating a detailed analysis of gender disparities in the field
+of climate economics. --> Note that the proportion of male and female having a
+given first name can vary according to the population/culture, and to the
+cohort/date of birth of the population. Indeed, a given name can see its gender
+attribution vary over the long term.
 
-#### Creation of variables of interest: proportion of male and female authors and gender type of co-authorship
 
-Thanks to this algorithm, we are able to calculate the proportion of authors who have been assigned to a male gender among all authors, as well as the proportion of authors who have been assigned to a male gender among authors whose gender has been correctly assigned.
-We are able to make the same type of calculation for the proportion of authors who have been assigned a female gender.
 
-Finally, we generate five variables for gender type of co-authorship.
-These variables are defined as "F" if there is only one author in the article and if this author has a female gender, "M" if there is only one author and if this author has a male gender, "MM" if there is more than 1 author and if these authors are only male, "FF" if there is more than 1 author and if these authors are only female, and finally "MF" if there is more than 1 author and if these authors are both male and female.
-These variables will be useful for the computation of descriptive statistics and further data analysis.
+<!-- As for the gender variable, the algorithm first treat full names for each
+author and then first names. --> <!-- If the full name is missing from our
+initial data base, both probabilities are set to NA. --> <!-- If the full name
+is is the list of top 10% of female economists, the probability for the first
+name to be female is set to 1 and 0 for male. --> <!-- Reciprocally, if the full
+name is in the list of top 10% of male economists, the probability for the first
+name to be female is set to 0 and 1 for male. --> <!-- Then, we treat first name
+for each author in the algorithm to define probabilities gender. --> <!-- If a
+first name is missing from our initial data base, both probabilities were set to
+NA. --> <!-- If a first name appeared on the list of common Chinese names, both
+probabilities were also set to NA. --> <!-- If first name is absent from the
+list of first names with measured gender probability (absent from the data frame
+that we created during the previous step), both probabilities were set to NA.
+--> <!-- If the first name was found and recognized as "male" or "female," the
+respective probabilities were assigned accordingly from the data frame assigning
+gender probabilities. -->
 
-## Quality and limits of the algorithm
 
-Having cleaned up the data and created our algorithm for assigning a gender to each existing first name, we now check the quality of our algorithm.
+
+### Creation of variables of interest: proportion of male and female authors and gender type of co-authorship
+
+Using our gender probability variable for each author, we are able to calculate
+the proportion of male and female authors at the article level. To do so, we sum
+the probability of female and male of each author of the article. We divide this
+sum by the number of authors with an identified gender, so that we get the
+percentage of female authors and male authors (among authors with identified
+gender) in the article.
+
+Finally, we create a categorical variable to document the gender arrangement of
+co-authorship. The five categories are the following:
+- "F" if there is only one author in the article and if this author has a female gender,
+- "M" if there is only one author and if this author has a male gender,
+- "MM" if there is more than 1 author and if these authors are only male,
+- "FF" if there is more than 1 author and if these authors are only female,
+- and finally "MF" if there is more than 1 author and if these authors are both male and female.
+These variables are later used for the computation of descriptive statistics and
+further data analysis.
+
+### Assessing the quality of our gender identification algorithm 
+
+Having cleaned up the data and created our algorithm for assigning a gender to
+each existing first name, we here propose a quality assessment of the algorithm.
+How well are we assigning gender to our authors in the corpus?
 
 #### Comparison between total number of first names and first names with assigned gender before the use of an assignation gender algorithm
 
-First and before constructing our algorithm, we can compare the total number of unique first names in our database with the total number of first names that can be correctly assigned to a gender.
-The latter is calculated using the data frame, which uses the "ssa" and "napp" methods to assign a gender to the first name.
+First and before constructing our algorithm, we can compare the total number of
+unique first names in our database with the total number of first names that can
+be assigned to a gender using the "ssa" and "napp" method of the `gender`
+package. This gives us an idea on the number of first names for which we can
+assign a gender proportion.
 
 ```{r, echo=FALSE, include=TRUE}
 all_names_incorpus <- unlist(Corpus.CleanedNames[, grepl("^f_name_", colnames(Corpus.CleanedNames))]) %>% 
@@ -189,73 +246,149 @@ length(all_names_incorpus)
 #length(unique(names_proba_df$name))[1] 24142
 ```
 
-We have 95,589 unique first names in our database.
-The total number of first names that can be assigned to a gender thanks to the "ssa" and "napp" method is 24 142.
-We therefore had roughly 75% of first names whose gender which could not be determined only using the SSA and NAPP methods, and which will not be recognized by these methods.
+We have 95,589 unique first names in our database. The total number of first
+names that can be assigned to a gender thanks to the "ssa" and "napp" method is
+24 142. Therefore, we have about 75% of first names whose gender which could not
+be determined only using the SSA and NAPP methods, and which will not be
+recognized by these methods. This can seem an important proportion of first name
+for which we cannot assign gender. But remember that for some of the authors,
+the gender identification is made using the list of top 10% of economists, and
+that it is likely that some of the unique first names for which there is no
+equivalent in the `gender` package, it is likely that it is relative rare first
+name (that does not concern many of our 1.1 million articles).
 
-Indeed, unmatched first names appear to come from non-Western cultures.
-These first names are fairly rare and do not recur regularly in the articles, so they have little effect on matching.
-However, this is an important limitation in that we are not able to assign a gender probability to non-Western first names, insofar as those first names will be defined as "unknown" while using the list of common Chinese names in our algorithm.
-This limit omits a whole part of the analysis for non-Western first names and therefore introduces a significant selection bias.
-However, the construction of the algorithm as we did and especially the use of lists for top 10 male and female economists will help us to identify correctly a large part of those unidentified gender.
+Having a deeper look on those first names not referenced in the `gender`
+package, they appear to come from non-Western cultures. These first names are
+fairly rare and do not recur regularly in the articles, so they have little
+effect on matching [It would be good to check how many articles have these first
+names]. However, this is an important limitation in that we are not able to
+assign a gender probability to a significant part of the worldwide population of
+economists. Our gender identification is thus not performant regarding
+non-Western authors and therefore introduces a significant selection bias.
+<!-- Already said so I remove: However, the construction of the algorithm as we did and especially the use of lists for top 10 male and female economists will help us to identify correctly a large part of those unidentified gender. -->
 
-#### Analysis of gender assignment at author level
+#### Analysis of gender identification at the article level
 
 ```{r}
 summary(Corpus.CleanedNames.2$ratio_identified_gender)
 ```
+In average, an article has 59% of its author with an identified gender. The
+median tells us that at least 50% of the articles have 75% of their authors with
+an identified gender.
 
-##### Checking the algorithm by number of authors per article
 
-To construct an analysis of the gender assignment at author level, we first looked at how well the algorithm is able to assign a genre to authors per article.
+##### Checking the gender identification by number of authors
+
+Getting deeper into our quality check, we can look at the percentage of authors
+with identified gender at the article level, while classifying articles by their
+number of authors:
 
 ```{r, echo=FALSE, include=TRUE}
 ratio_by_nbauthours <- Corpus.CleanedNames.2 %>% 
   group_by(nb_authors) %>% 
-  summarize(mean_ratio = mean(ratio_identified_gender, na.rm = T),
-            med_ratio = median(ratio_identified_gender),
-            nb_article = n())
-ratio_by_nbauthours
+  summarize(
+    nb_article = n(),
+    mean_ratio = mean(ratio_identified_gender, na.rm = T),
+    med_ratio = median(ratio_identified_gender)
+    )
+ratio_by_nbauthours %>%  
+  kbl(digits = 3) %>%
+  kable_classic_2(full_width = F, html_font = "helvetica")
 ```
 
-The results show descriptive statistics for the ratio of authors with an identified gender among the total number of authors for articles, grouped by number of authors.
-The results show that the average proportion of authors with an identified gender inreases slightly as the number of authors per article increases For example, articles with a single author have an average of 0.5611 authors with identified gender among the total number of authors, while those with fifteen authors have a higher average of 0.651.
-Regarding the median of the ratios, it decreases with the number of authors per article.
-For instance, articles with one author have a median of 1.0000, indicating that more than/at least 50% of articles with one author have an identified genre, while this median proportion decreases as the number of authors increases to reach 0.8 for articles with fifteen authors.
-Overall, these trends suggest that in articles with a greater number of authors, it is less likely that all authors have an identified gender, which could be due to greater diversity or less complete author information.
+The results show descriptive statistics for the ratio of authors with an
+identified gender among the total number of authors for articles, grouped by
+number of authors. There are almost 200,000 articles with exactly 3 authors, 64%
+of their authors are identified, and more than 50% of these articles have 2 of
+these 3 authorsr that have an identified gender. This table show that the
+average proportion of authors with an identified gender inreases slightly as the
+number of authors per article increases For example, articles with a single
+author have an average of 0.5611 authors with identified gender among the total
+number of authors, while those with fifteen authors have a higher average of
+0.651. Regarding the median of the ratios, it decreases with the number of
+authors per article.
+<!-- I drop this as I think it is unnecessarily complex: For instance, articles with one author have a median of 1.0000, indicating that more than/at least 50% of articles with one author have an identified genre, while this median proportion decreases as the number of authors increases to reach 0.8 for articles with fifteen authors. -->
+<!-- Overall, these trends suggest that in articles with a greater number of authors, it is less likely that all authors have an identified gender, which could be due to greater diversity or less complete author information. -->
 
-Commentaire: interprétation générale = baisse de la médiane mais la moyenne augmente donc donne des résultats différents - pas sûre de l'interprétation finale et de ce que l'on doit privilégier en termes d'analyse (la moyenne ou la médiane). 
+<!-- Commentaire: interprétation générale = baisse de la médiane mais la moyenne augmente donc donne des résultats différents - pas sûre de l'interprétation finale et de ce que l'on doit privilégier en termes d'analyse (la moyenne ou la médiane).  -->
 
-##### Checking the algorithm by number of articles per author
+#### Checking the algorithm at the author level
 
-To improve the analysis of the quality of the author-level gender assignment algorithm, we enhance our analysis by checking the algorithm against the number of articles per author.
+We can investigate the quality of the algorithm by looking at each author
+individually in our bibliographic database. We thus consider a unique author in
+our database when it has a unique full name. Note that potential homonyms are
+thus considered as the same authors. On the other hand, a same author but with
+different possible spelling of its full name will be considered as a different
+author (for instance, one article can give its full name with its middle name,
+while other articles may not). The number of authors for which the gender is
+missing is the following:
+
 
 ```{r, echo=FALSE, include=TRUE}
 table(is.na(authors_df$gender))
 ```
 
-The table shows statistics on the gender assignment of authors based on the number of articles they have written.
-Out of a total of 827,219 authors, around 93.6% (774,315) have had their gender correctly assigned after the use of the gender assignation algorithm, while around 6.4% (52,904) have missing genders, regardless of the number of articles they have written and independantly of the type of assignation which can be "female", "male", "undecided" or "unknown".
-
+The table shows statistics on the gender assignment of authors based on the
+number of articles they have written. Out of a total of 827,219 authors, around
+6.4% (52,904) have missing genders, regardless of the number of articles they
+have written. Such authors are ones with missing first names, or a first name
+composed of a single letter (as we cannot identify them at all). We can then
+look at the number of authors by categories of the gender variable:
 ```{r, echo=FALSE, include=TRUE}
 table(authors_df$gender, useNA = "ifany")
 ```
 
-Of these, 20.9% (172,987) authors are identified as women, 35.9% (297,279) as men, (4.4% ) 36,540 have an undetermined gender, and 32.3% (267,509) have an unknown gender.
+Of these, 20.9% (172,987) authors are identified as women, 35.9% (297,279) as
+men, (4.4% ) 36,540 have an undetermined gender (first name probability between
+10% and 90%), and 32.3% (267,509) have an unknown gender (either a common
+chinese first name, or a unreferenced first name in the `gender` package).
+
+A significant proportion of authors therefore have an undecided or unknown
+gender, due to the large proportion of non-Western first names that we did not
+manage to assign. In particular, we notice several authors with more than 10
+articles are East Asian names, which may explain these figures and difficulties
+in correctly assigning gender due to the diversity of names and gender
+conventions in this region. See for example:
 
 ```{r, echo=FALSE, include=TRUE}
 # Check authors that have written more than 10 articles:
 authors_with10articlesormore <- authors_df %>% 
   filter(n_articles>9)
-authors_with10articlesormore 
+authors_with10articlesormore %>%  
+  kbl(digits = 3) %>%
+  kable_classic_2(full_width = F, html_font = "helvetica")
 ```
 
-A significant proportion of authors therefore have an undecided or unknown gender, due to the large proportion of non-Western first names that we did not manage to assign.
-In particular, the majority of authors with more than 10 articles are East Asian names, which may explain these figures and difficulties in correctly assigning gender due to the diversity of names and gender conventions in this region.
+To give more details, we can reference the number of authors in each gender category, by number of articles written:
 
 ```{r}
 # By number of articles written for each author, how much missing gender?
-table(authors_df$n_articles, authors_df$gender, useNA = "ifany")
+quantile(authors_df$n_articles, probs = c(0.1,0.5,0.66,0.75,0.8,0.9,0.95))
+temp_df <- authors_df %>% 
+  mutate(article_quantity = case_when(n_articles == 1 ~ "1 article",
+                                      n_articles == 2 ~ "2 articles",
+                                      n_articles == 3 ~ "3 articles",
+                                      n_articles %in% c(4:6)  ~ "4 to 6 articles",
+                                      n_articles %in% c(7:10) ~ "7 to 10 articles",
+                                      n_articles %in% c(11:20) ~ "11 to 20 articles",
+                                      n_articles > 20 ~ "more than 20 articles"),
+         article_quantity = factor(article_quantity))
+current_levels <- levels(temp_df$article_quantity)
+# Rearrange the levels
+new_levels <- c(current_levels[1], current_levels[3], current_levels[4], current_levels[5], current_levels[6], current_levels[2], current_levels[7])
+
+temp_df %>% 
+  mutate(article_quantity = factor(article_quantity, levels = new_levels)) %>% 
+  group_by(article_quantity) %>% 
+  summarize(n_authors = n(),
+            n_female = length(n_articles[gender == "female"]),
+            n_male = length(n_articles[gender == "male"]),
+            n_undecided = length(n_articles[gender == "undecided"]),
+            n_unknown = length(n_articles[gender == "unknown"]),
+            n_NA = length(n_articles[is.na(gender)])) %>%  
+  kbl(digits = 3) %>%
+  kable_classic_2(full_width = F, html_font = "helvetica")
+# table(authors_df$n_articles, authors_df$gender, useNA = "ifany")
 # Alternative: interprétation en pourcentage, et regrouper par décile. 
 ```
 
