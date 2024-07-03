@@ -310,11 +310,15 @@ for(i in 1:15) {
                 )
             )
           )
-        ),
-      nb_authors_gendered = rowSums(!is.na(select(., starts_with("proportion_male")))), # Count the number of authors with identified gender
-      ratio_identified_gender = nb_authors_gendered / nb_authors # Among authors, the proportion of authors with identified gender
+        )
     )
 }
+
+Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>% # Count authors with identified gender
+  mutate(
+    nb_authors_gendered = rowSums(!is.na(select(., starts_with("proportion_male")))), # Count the number of authors with identified gender
+    ratio_identified_gender = nb_authors_gendered / nb_authors # Among authors, the proportion of authors with identified gender
+  )
 
 # Check results
 check <- Corpus.CleanedNames.2 %>% 

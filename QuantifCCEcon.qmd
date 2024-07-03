@@ -23,7 +23,8 @@ gc()
 
 # Load package
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere, stringr, gender, genderdata, stringi, dplyr, tidyr, genderizeR, kableExtra)
+pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere, stringr, 
+               gender, genderdata, stringi, dplyr, tidyr, genderizeR, kableExtra, ggplot2)
 
 # List directories 
 dir <- list()
@@ -241,11 +242,6 @@ all_names_incorpus <- unlist(Corpus.CleanedNames[, grepl("^f_name_", colnames(Co
   unique() # Vecteur qui contient tous les prénoms différents dans le corpus
 length(all_names_incorpus)
 ```
-
-```{r, echo=FALSE, include=TRUE}
-#length(unique(names_proba_df$name))[1] 24142
-```
-
 We have 95,589 unique first names in our database. The total number of first
 names that can be assigned to a gender thanks to the "ssa" and "napp" method is
 24 142. Therefore, we have about 75% of first names whose gender which could not
@@ -307,10 +303,18 @@ author have an average of 0.5611 authors with identified gender among the total
 number of authors, while those with fifteen authors have a higher average of
 0.651. Regarding the median of the ratios, it decreases with the number of
 authors per article.
-<!-- I drop this as I think it is unnecessarily complex: For instance, articles with one author have a median of 1.0000, indicating that more than/at least 50% of articles with one author have an identified genre, while this median proportion decreases as the number of authors increases to reach 0.8 for articles with fifteen authors. -->
-<!-- Overall, these trends suggest that in articles with a greater number of authors, it is less likely that all authors have an identified gender, which could be due to greater diversity or less complete author information. -->
-
-<!-- Commentaire: interprétation générale = baisse de la médiane mais la moyenne augmente donc donne des résultats différents - pas sûre de l'interprétation finale et de ce que l'on doit privilégier en termes d'analyse (la moyenne ou la médiane).  -->
+<!-- I drop this as I think it is unnecessarily complex: For instance, articles
+with one author have a median of 1.0000, indicating that more than/at least 50%
+of articles with one author have an identified genre, while this median
+proportion decreases as the number of authors increases to reach 0.8 for
+articles with fifteen authors. --> <!-- Overall, these trends suggest that in
+articles with a greater number of authors, it is less likely that all authors
+have an identified gender, which could be due to greater diversity or less
+complete author information. -->
+<!-- Commentaire: interprétation générale = baisse de la médiane mais la moyenne
+augmente donc donne des résultats différents - pas sûre de l'interprétation
+finale et de ce que l'on doit privilégier en termes d'analyse (la moyenne ou la
+médiane).  -->
 
 #### Checking the algorithm at the author level
 
@@ -359,7 +363,8 @@ head(authors_with10articlesormore) %>%
   kable_classic_2(full_width = F, html_font = "helvetica")
 ```
 
-To give more details, we can reference the number of authors in each gender category, by number of articles written:
+At a more detailed level, we have the following number of authors in each gender
+category, by number of articles written:
 
 ```{r}
 # By number of articles written for each author, how much missing gender?
@@ -376,145 +381,208 @@ temp_df <- authors_df %>%
 current_levels <- levels(temp_df$article_quantity)
 # Rearrange the levels
 new_levels <- c(current_levels[1], current_levels[3], current_levels[4], current_levels[5], current_levels[6], current_levels[2], current_levels[7])
+# table(authors_df$n_articles, authors_df$gender, useNA="ifany")
+# table(temp_df$article_quantity, authors_df$gender, useNA="ifany")
+# table(temp_df$n_articles)
 
 temp_df %>% 
   mutate(article_quantity = factor(article_quantity, levels = new_levels)) %>% 
   group_by(article_quantity) %>% 
-  summarize(n_authors = n(),
-            n_female = length(n_articles[gender == "female"]),
-            n_male = length(n_articles[gender == "male"]),
-            n_undecided = length(n_articles[gender == "undecided"]),
-            n_unknown = length(n_articles[gender == "unknown"]),
-            n_NA = length(n_articles[is.na(gender)])) %>%  
+  summarize(n_authors = length(fullname),
+            # n_female = length(fullname[(!is.na(gender)) & gender == "female"]),
+            # n_male = length(fullname[(!is.na(gender)) & gender == "male"]),
+            n_identified = length(fullname[(!is.na(gender)) & gender %in% c("male", "female")]),
+            percent_identified = n_identified / n_authors,
+            # n_undecided = length(fullname[(!is.na(gender)) & gender == "undecided"]),
+            # n_unknown = length(fullname[(!is.na(gender)) & gender == "unknown"]),
+            # n_NA = length(fullname[is.na(gender)]),
+            n_unidentified = length(fullname[is.na(gender)]) + length(fullname[(!is.na(gender)) & gender %in% c("undecided", "unknown")]),
+            percent_unidentified = n_unidentified / n_authors) %>%  
   kbl(digits = 3) %>%
   kable_classic_2(full_width = F, html_font = "helvetica")
 # table(authors_df$n_articles, authors_df$gender, useNA = "ifany")
 # Alternative: interprétation en pourcentage, et regrouper par décile. 
 ```
 
-Examining authors' gender assignment by number of articles written, we find that the percentage of authors with unassigned genders increases slightly with the number of articles written, suggesting that prolific authors are more likely to have names unrecognized by gender algorithms and highlighting the challenges associated with gender assignment in diverse cultural contexts.
-For instance, among authors, 501 694 have written only 1 article, 44.3% (36 326 + 21 058 + 165 074/501 694) have an "undetermined", "unknown" or complete unassigned gender, while among the authors that have written that have written 273, 292 or 343 articles, 100% have a complete unassigned gender.
 
-Commentaire: l'interprétation n'est pas forcément évidente.
-Ne faudrait-il pas rajouter à ce tableau deux colonnes : une qui compte le nombre d'auteurs qui ont écrit x articles et une qui compte la proportion de «undetermined», «unknown» et «NA» sur le nombre d'auteurs qui ont écrit x articles ?
-Cela permettrait une analyse beaucoup plus simple car à vue d'oeil ce n'est pas sur que l'interprétation soit correcte.
+We notice that our algorithm is better able to assign a gender to author that
+have written more articles than author with a few number of articles. Among
+authors with 11 articles or more, we're able to identify gender for 2 out of
+three of them, while for authors with 1, 2 or 3 articles written, we can only
+identify the gender for slightly more than 55% of them. Therefore, as the number
+of articles written by an author increases, our algorithm is better able to
+assign gender. This is partly due to the fact that we use the ranking of 10%
+male and female economists, who are researchers that tend to have written more
+than 10 articles in their carreer.
 
-#### Analysis of gender assignment at article level
+<!-- This was the previous paragraph, but I think our interpretation was erroenous: Examining authors' gender assignment by number of articles written, we find that the percentage of authors with unassigned genders increases slightly with the number of articles written, suggesting that prolific authors are more likely to have names unrecognized by gender algorithms and highlighting the challenges associated with gender assignment in diverse cultural contexts. -->
+<!-- For instance, among authors, 501 694 have written only 1 article, 44.3% (36 326 + 21 058 + 165 074/501 694) have an "undetermined", "unknown" or complete unassigned gender, while among the authors that have written that have written 273, 292 or 343 articles, 100% have a complete unassigned gender. -->
 
-It is also possible to perform the analysis using the variable that gives, by article, the percentage of authors whose gender is correctly identified among the total number of authors.
+<!-- Commentaire: l'interprétation n'est pas forcément évidente. -->
+<!-- Ne faudrait-il pas rajouter à ce tableau deux colonnes : une qui compte le nombre d'auteurs qui ont écrit x articles et une qui compte la proportion de «undetermined», «unknown» et «NA» sur le nombre d'auteurs qui ont écrit x articles ? -->
+<!-- Cela permettrait une analyse beaucoup plus simple car à vue d'oeil ce n'est pas sur que l'interprétation soit correcte. Je propose une modification pour prendre en compte cela -->
+
+#### Analysis of gender identification at article level
+
+It is also possible to study our gender identification at the article level. Our
+articles can have from 1 to 15 authors. We can count the number of authors by
+articles, and in particular the number of authors for whom we identify any
+gender according to our algorithm. We can then measure the share of authors with
+an identified gender at the article level. The following table documents the
+quantiles of this share among all articles:
 
 ```{r, echo=FALSE, include=TRUE}
 Gender_of_Articles <- Corpus.CleanedNames.2 %>% 
   summarize(Nb_articles = length(ratio_identified_gender), # Nb total d'article
-            NoGender = length(ratio_identified_gender[is.na(ratio_identified_gender) | ratio_identified_gender == 0]) / Nb_articles, # Ratio d'articles avec aucun auteur dont le genre est identifié ou NA # Ratio d'article avec aucun auteur dont le genre est identifié : raouter valeurs manuntes
-            AllGender = length(ratio_identified_gender[ratio_identified_gender == 1])/Nb_articles, # Ratio d'article où tous les auteurs sont identifiés
-            Gender_Larger0.5 = length(ratio_identified_gender[ratio_identified_gender >= 0.5])/Nb_articles, # Ratio d'article où au moins 50% des auteurs sont identifiés
-            Gender_Larger0.9 = length(ratio_identified_gender[ratio_identified_gender >= 0.9])/Nb_articles, # Ratio d'article où au moins 90% des auteurs sont identifiés
-            Gender_Larger0.25 = length(ratio_identified_gender[ratio_identified_gender >= 0.25])/Nb_articles, # Ratio d'article où au moins 25% des auteurs sont identifiés
             Mean_IdentifiedGender = mean(ratio_identified_gender), # Moyenne du ratio d'auteurs identifé
-            Median_identifiedGender = median(ratio_identified_gender))# Médiane
+            Median_identifiedGender = median(ratio_identified_gender), # Médiane
+            NoGender = length(ratio_identified_gender[is.na(ratio_identified_gender) | ratio_identified_gender == 0]) / Nb_articles, # Ratio d'articles avec aucun auteur dont le genre est identifié ou NA # Ratio d'article avec aucun auteur dont le genre est identifié : raouter valeurs manuntes
+            AllGender = length(ratio_identified_gender[(!is.na(ratio_identified_gender)) & ratio_identified_gender == 1])/Nb_articles, # Ratio d'article où tous les auteurs sont identifiés
+            Gender_Larger0.5 = length(ratio_identified_gender[(!is.na(ratio_identified_gender)) & ratio_identified_gender >= 0.5])/Nb_articles, # Ratio d'article où au moins 50% des auteurs sont identifiés
+            Gender_Larger0.9 = length(ratio_identified_gender[(!is.na(ratio_identified_gender)) & ratio_identified_gender >= 0.9])/Nb_articles, # Ratio d'article où au moins 90% des auteurs sont identifiés
+            Gender_Larger0.25 = length(ratio_identified_gender[(!is.na(ratio_identified_gender)) & ratio_identified_gender >= 0.25])/Nb_articles, # Ratio d'article où au moins 25% des auteurs sont identifiés
 
-Gender_of_Articles
+            )
+
+Gender_of_Articles %>%  
+  t() %>% 
+  kbl(digits = 3) %>%
+  kable_classic_2(full_width = F, html_font = "helvetica")
 ```
-
-Gender analysis at article level shows that around 30% of articles do not allow gender to be assigned to a single author.
-This indicates a significant difficulty in identifying the gender of a significant proportion of articles.
-On the other hand, for over 48% of articles, the gender of all authors is correctly identified.
-This majority proportion demonstrates a certain efficiency in gender assignment.
-For 65% of articles, it is possible to assign the gender to at least half of the authors.
-This shows that most articles have at least partial gender identification among their authors.
-Around half the articles allow gender to be assigned to 90% of the authors.
-This high proportion reflects almost complete gender identification for a significant proportion of articles, illustrating the effectiveness of the algorithms or methods used for gender assignment.
-Finally, for around 70% of the articles, it is possible to assign the gender to 25% of the authors.
-This figure indicates that, even in the most difficult cases, it is still possible to determine the gender of a proportion of authors, which may be sufficient for certain statistical analyses.
+<!-- I remove the expression "correctly identified", as we don't know if it is correctly identifiy, but rather we identify a gender or not -->
+Around 30% of articles have zero author with an identified gender. This illustrates
+the limits of our method to identify author's gender. On the other hand, for 48%
+of articles, the gender of all authors is identified. Therefore, there is half
+of our corpus for which all genders of authors can be identified. For around 65% of articles,
+we are able to identify gender to at least half of the article's authors. This shows
+that most articles have at least partial gender identification among their
+authors. In addition, for about 69% of our articles, we identify the gender of
+at least 25% of their authors. Finally, for less than half of the articles, we
+identify the gender of 90% of their authors. <!-- This high proportion reflects
+almost complete gender identification for a significant proportion of articles,
+illustrating the effectiveness of the algorithms or methods used for gender
+assignment. --> Finally, this figure indicates that, even in the most difficult
+cases, it is still possible to determine the gender of a proportion of authors,
+which may be sufficient for certain statistical analyses.
 
 ## Descriptive statistics and data analysis
 
-```{r}
-library(ggplot2)
-```
+The following analysis on the gender of authors of peer-reviewed articles in
+economics will focus on the subsample of articles for which we are able to
+identify the gender of at least one author. This is the case for 70% of the
+articles of our full bibliographic sample.
 
-```{r}
+```{r, echo=FALSE}
 OneGender_by_Articles <- Corpus.CleanedNames.2 %>% 
   summarize(Nb_articles = length(ratio_identified_gender), # Nb total d'article
-            NoGender = length(ratio_identified_gender[is.na(ratio_identified_gender) | ratio_identified_gender == 0]) / Nb_articles)
+            No_Author_Gendered = length(ratio_identified_gender[is.na(ratio_identified_gender) | ratio_identified_gender == 0]) / Nb_articles,
+            AtLeast_OneAuthor_Gendered = length(ratio_identified_gender[(!is.na(ratio_identified_gender)) & ratio_identified_gender > 0]) / Nb_articles)
 
-OneGender_by_Articles
+OneGender_by_Articles %>% 
+  kbl(digits = 3) %>%
+  kable_classic_2(full_width = F, html_font = "helvetica")
 ```
 
-First, we can remind that the absolute number of articles with at least 1 author identified in terms of gender is 1 136 055.
-Thus, there is at least 70% of our articles whose gender has been assigned to at least one author.
+Note that among the 29.9% articles excluded in this analysis, most of them are written by non-western authors. 
 
-### Proportion of male and female authors at an aggregate level
+### Aggregate share of male and female authors 
+
+For a given article, we measure the share of female authors and the share of
+male authors as follows. For female (male), we sum the probability of an author
+to be a female (male) among all article's authors, and we divide this number by
+the total number of authors with an identified gender. The table below presents
+some summary statistics of the share of female and male authors in our corpus:
 
 ```{r, echo=FALSE, include=TRUE}
-#amélioration de ton code pour faire un tableau unique 
-# Charger les packages nécessaires
-library(dplyr)
-library(knitr)
 
 # Calcul des statistiques descriptives
-stats_proportion_female_all <- summary(Corpus.CleanedNames.2$proportion_gender_female_all)
-stats_proportion_female_id <- summary(Corpus.CleanedNames.2$proportion_gender_female_id)
-stats_sum_gender_female <- summary(Corpus.CleanedNames.2$sum_gender_female)
-stats_sum_gender_male <- summary(Corpus.CleanedNames.2$sum_gender_male)
-stats_proportion_male_all <- summary(Corpus.CleanedNames.2$proportion_gender_male_all)
-stats_proportion_male_id <- summary(Corpus.CleanedNames.2$proportion_gender_male_id)
+# stats_proportion_female_all <- summary(Corpus.CleanedNames.2$proportion_gender_female_all)
+# stats_proportion_female_id <- summary(Corpus.CleanedNames.2$proportion_gender_female_id)
+# stats_sum_gender_female <- summary(Corpus.CleanedNames.2$sum_gender_female)
+# stats_sum_gender_male <- summary(Corpus.CleanedNames.2$sum_gender_male)
+# stats_proportion_male_all <- summary(Corpus.CleanedNames.2$proportion_gender_male_all)
+# stats_proportion_male_id <- summary(Corpus.CleanedNames.2$proportion_gender_male_id)
 
 # Extraire les valeurs des statistiques descriptives
-extract_summary <- function(summary_obj) {
-  c(summary_obj["Min."], summary_obj["1st Qu."], summary_obj["Median"], summary_obj["Mean"], summary_obj["3rd Qu."], summary_obj["Max."])
-}
+# extract_summary <- function(summary_obj) {
+#   c(summary_obj["Min."], summary_obj["1st Qu."], summary_obj["Median"], summary_obj["Mean"], summary_obj["3rd Qu."], summary_obj["Max."])
+# }
 
 # Créer un tableau de données avec les valeurs extraites
-results_table <- data.frame(
-  Statistic = c("Min", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"),
-  Proportion_Female_All = extract_summary(stats_proportion_female_all),
-  Proportion_Female_Id = extract_summary(stats_proportion_female_id),
-  Sum_Gender_Female = extract_summary(stats_sum_gender_female),
-  Sum_Gender_Male = extract_summary(stats_sum_gender_male),
-  Proportion_Male_All = extract_summary(stats_proportion_male_all),
-  Proportion_Male_Id = extract_summary(stats_proportion_male_id)
-)
+# results_table <- data.frame(
+#   Statistic = c("Min", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max"),
+#   # Proportion_Female_All = extract_summary(stats_proportion_female_all),
+#   Proportion_Female_Id = extract_summary(stats_proportion_female_id),
+#   # Sum_Gender_Female = extract_summary(stats_sum_gender_female),
+#   # Sum_Gender_Male = extract_summary(stats_sum_gender_male),
+#   # Proportion_Male_All = extract_summary(stats_proportion_male_all),
+#   Proportion_Male_Id = extract_summary(stats_proportion_male_id)
+# )
 
-results_table
+#amélioration de ton code pour faire un tableau unique 
+# I want to change, to only make the descriptive statistics on the 'id' variable, and to give as well the number of articles in the sample
+results_table <- Corpus.CleanedNames.2 %>% 
+  filter(!is.na(proportion_gender_male_id), ! is.na(ratio_identified_gender) , ratio_identified_gender !=0 )%>% # Keeping our subsample to articles with at least one author gendered
+    summarise(
+    ShareFemale_mean = mean(proportion_gender_female_id, na.rm = TRUE),
+    ShareFemale_min = quantile(proportion_gender_female_id, 0, na.rm = TRUE),
+    ShareFemale_25 = quantile(proportion_gender_female_id, 0.25, na.rm = TRUE),
+    ShareFemale_median = median(proportion_gender_female_id, na.rm = TRUE),
+    ShareFemale_75 = quantile(proportion_gender_female_id, 0.75, na.rm = TRUE),
+    ShareFemale_max = quantile(proportion_gender_female_id, 1, na.rm = TRUE),
+    ShareMale_mean = mean(proportion_gender_male_id, na.rm = TRUE),
+    ShareMale_min = quantile(proportion_gender_male_id, 0, na.rm = TRUE),
+    ShareMale_25 = quantile(proportion_gender_male_id, 0.25, na.rm = TRUE),
+    ShareMale_median = median(proportion_gender_male_id, na.rm = TRUE),
+    ShareMale_75 = quantile(proportion_gender_male_id, 0.75, na.rm = TRUE),
+    ShareMale_max = quantile(proportion_gender_male_id, 1, na.rm = TRUE)
+  )
+
+# Convert wide data to long format
+long_format <- results_table %>%
+  pivot_longer(cols = everything(), names_to = c(".value", "variable"), names_pattern = "(.*)_(.*)")
+
+long_format %>% 
+  kbl(digits = 3) %>%
+  kable_classic_2(full_width = F, html_font = "helvetica")
+
 ```
 
-This analysis presents descriptive statistics of gender proportions among authors of academic articles.
-Variables analyzed include the proportion of female and male authors, both among all authors and among those whose gender was successfully assigned, as well as the sum of male and female gender probabilities for each article.
-
-The results indicate a wide variation in gender proportions among authors.
-The proportion of female authors among all authors ranges from 0 to 1, with an average of 0.2165, meaning that on average, around 21.65% of authors are female.
-The proportion of female authors among gender-assigned authors has a slightly higher average of 25.62%, suggesting that women may be better identified among authors.
-In comparison, the proportion of male authors among all authors is also highly variable, with an average of 63.77%.
-The proportion of male authors among gender-assigned authors is 74.38% on average, which is higher than for women.
-
-The results therefore reveal a notable under-representation of women among authors of academic articles in terms of proportion.
-These results highlight the need for continued efforts to encourage and support women's participation in the academic field.
+In average, an article has 75% of its authors who are male authors and 25% who
+are female female authors. But this average perspective masks the idea that most
+articles have no female author. Indeed, more than half of the articles have no
+female authors, since the median of the share of female author is almost equal
+to zero. This reveals a notable under-representation of women among authors of
+academic articles in economics. These results highlight the need for continued
+efforts to encourage and support women's participation in the academic field.
+The histograms of these variables below complete this description:
 
 ```{r, echo=FALSE, include=TRUE}
-hist(Corpus.CleanedNames.2$proportion_gender_male_id, main="Distribution of the proportion of men", xlab="Proportion of men", col="blue", breaks=20)
-hist(Corpus.CleanedNames.2$proportion_gender_female_id, main="Distribution of the proportion of women", xlab="Proportion of women", col="pink", breaks=20)
+hist(Corpus.CleanedNames.2$proportion_gender_male_id, main="Distribution of the proportion of men authors by articles", xlab="Proportion of men", col="blue", breaks=20)
+hist(Corpus.CleanedNames.2$proportion_gender_female_id, main="Distribution of the proportion of women authors by articles", xlab="Proportion of women", col="pink", breaks=20)
 ```
 
-The graphs below illustrate the distributions of male and female gender proportions among authors whose gender has been assigned.
-The analysis focuses on two separate histograms, one representing the proportion of male authors and the other the proportion of female authors.
-
-The histogram of the proportion of male authors shows a broadly spread distribution, with a high frequency of values close to 1.
-This indicates that a large number of articles have a majority proportion of male authors.
-The distribution also shows a marked asymmetry to the right, reflecting the fact that few articles have a low proportion of male authors.
-
-The histogram of the proportion of female authors reveals a different distribution.
-Most values lie between 0 and 0.5, with a notable peak at the lower values.
-This distribution shows that there are relatively few articles with a high proportion of female authors, and many articles have lower proportions of women.
-In contrast to the distribution for men, this distribution is asymmetrical towards the left, indicating that the predominance of women among authors is less common.
-
-A comparison of these two distributions reveals a significant under-representation of women among authors of academic articles.
-While the proportion of men tends to be high in many articles, that of women remains low in the majority of cases.
-These observations are consistent with previous statistical findings, underlining the need for ongoing efforts to balance gender representation in academia.
-The disparity observed in the distributions calls for reflection on the factors contributing to this inequality, and the development of strategies to promote greater inclusion of women in scientific research.
+The graphs above illustrate the distributions of the male and female
+proportions. The histogram of the proportion of male authors shows a very large
+number of articles written only by male (the highest bar on the histogram is
+close to one). The histogram of the proportion of female authors reveals a
+symmetric distribution: there is a vast majority of articles without women
+authors. There is a similar number of articles written by female-author only than written in
+co-authorship with male authors (the height of the bar on the right, above the 1
+value, is of similar height as the cumulated height of all the bars between 0.2
+and 0.8). A comparison of these two distributions reveals a significant
+under-representation of women among authors of academic articles. While the
+proportion of men tends to be high in many articles, that of women remains low
+in the majority of cases. These observations are consistent with previous
+findings in the literature, underlining the need for ongoing efforts to balance
+gender representation in academia. The disparity observed in the distributions
+calls for reflection on the factors contributing to this inequality, and the
+development of strategies to promote greater inclusion of women in scientific
+research.
 
 ### Proportion of female and male authors according to different type of collaboration
+
+<!-- I'm not sure that this analysis is very informative as such. I would suggest to rather compute the share of articles in each category? This would inform the reader about the quantity of articles in each category overall. As here, we basically say that female authors only have almost 100% of female authors, male-female articles have almost 50% female authors -> which is a by-product of our gender category variable -->
 
 ```{r, echo=FALSE, include=TRUE}
 stats_by_category <- Corpus.CleanedNames.2 %>%
@@ -559,7 +627,36 @@ This parity in proportions could foster a research environment where the ideas a
 Promoting this type of collaboration could be an effective way of reducing gender inequalities in academia.
 Policies and initiatives to encourage mixed-gender collaborations could thus play a crucial role in advancing gender equity in science and research.
 
+**Alternative:** Articles can be categorized according to whether authors are
+written only by a single male or female authors, or by a collaboration of
+female-only, male-only or a mixed-gender collaboration. The following table
+computes the quantity of articles in each category:
+
+```{r}
+share_gender_category <- Corpus.CleanedNames.2 %>% 
+  filter(!is.na(category_gender)) %>% 
+  group_by(category_gender) %>% 
+  summarize(number_articles = n(),
+            share_articles = number_articles / length(Corpus.CleanedNames.2$TI[!is.na(Corpus.CleanedNames.2$category_gender)]))
+
+share_gender_category %>% 
+  t() %>% 
+  kbl(digits = 3) %>%
+  kable_classic_2(full_width = F, html_font = "helvetica")
+```
+
+Among the 62.8% of articles with authors having an identified gender which are
+only written by male, 38% are written by a single author and 24.6% are written
+by multiple male authors. Among articles with at least one female author
+(37.2%), the share of single-authored paper is substantially larger (11.1%) than
+the share of multiple female author articles (4%). In addition, when female
+write articles, it tends to be even more often in collaboration with male, as
+the share of articles co-authored by male and female authors is 22.1%.
+
 ### Overall Temporal evolution
+
+The figure below documents the evolution of the average share of male and female authors
+by year:
 
 ```{r, echo=FALSE, include=TRUE}
 annual_stats <- Corpus.CleanedNames.2 %>%
@@ -568,10 +665,8 @@ annual_stats <- Corpus.CleanedNames.2 %>%
     Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
     Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE)
   )
-annual_stats
-```
+# annual_stats
 
-```{r, echo=FALSE, include=TRUE}
 annual_stats_long <- annual_stats %>%
   pivot_longer(
     cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id),
@@ -590,31 +685,48 @@ ggplot(annual_stats_long, aes(x = PY, y = Proportion, color = Gender)) +
   theme_minimal()
 ```
 
-This section presents the evolution of the average proportion of female and male authors in academic publications, from 1950 to 2023.
-It reveals significant trends over several decades, highlighting gender dynamics in academic research.
-
-From 1950 to 1970, the average proportion of female authors remained remarkably low, hovering around 0.06.
-During this period, male authors largely dominated publications, with proportions approaching 0.94.
-This disparity underlines the predominance of men in the academic field at the time.
-
-Between 1970 and 1990, a slight increase in the proportion of female authors was observed, rising from around 0.12 to 0.15.
-This period marks the beginning of a gradual change, although men continue to represent a substantial majority.The increase remains modest, but indicates a trend towards gender diversification among academic authors.
-
-From the 1990s onwards, the average proportion of female authors began to rise more significantly.
-By 1995, this proportion had risen to around 0.18, indicating greater inclusion of women in academic publications.
-This trend has continued steadily, with the proportion reaching around 0.30 in 2017.
-At the same time, the average proportion of male authors is gradually decreasing, but remains dominant.
-
-Since 2017, the average proportion of female authors has exceeded 0.30, reaching 0.32 in 2020.
-This growth indicates increasing gender parity, although men continue to constitute a relative majority with an average proportion around 0.68.
-Recent years have seen a stabilization of these proportions, with slight fluctuations.
-
-In conclusion, this section illustrates a positive trend towards greater inclusion of women in academic research over the decades.
-Although men are still in the majority, the continuing growth in the proportion of female authors bears witness to a gradual shift towards more balanced gender representation in scientific publications.
-
-### Temporal evolution according to categorical variables
-
 ```{r, echo=FALSE, include=TRUE}
+
+```
+
+This section presents the evolution of the average proportion of female and male
+authors in academic publications, from 1950 to 2023. It reveals significant
+trends over several decades, highlighting gender dynamics in academic research.
+From 1950 to 1970, the average proportion of female authors remained remarkably
+low, hovering around 0.06. During this period, male authors largely dominated
+publications, with proportions approaching 0.94. This disparity underlines the
+predominance of men in the academic field at the time.
+
+Between 1970 and 1990, a slight increase in the proportion of female authors was
+observed, rising from around 0.12 to 0.15. This period marks the beginning of a
+gradual change, although men continue to represent a substantial majority.The
+increase remains modest, but indicates a trend towards gender diversification
+among academic authors.
+
+From the 1990s onwards, the average proportion of female authors began to rise
+more significantly. By 1995, this proportion had risen to around 0.18,
+indicating greater inclusion of women in academic publications. This trend has
+continued steadily, with the proportion reaching around 0.30 in 2017. At the
+same time, the average proportion of male authors is gradually decreasing, but
+remains dominant.
+
+Since 2017, the average proportion of female authors has exceeded 0.30, reaching
+0.32 in 2020. This growth indicates increasing gender parity, although men
+continue to constitute a relative majority with an average proportion around
+0.68. Recent years have seen a stabilization of these proportions, with slight
+fluctuations.
+
+In conclusion, this section illustrates a positive trend towards greater
+inclusion of women in academic research over the decades. Although men are still
+in the majority, the continuing growth in the proportion of female authors bears
+witness to a gradual shift towards more balanced gender representation in
+scientific publications.
+
+### Temporal evolution according to the gender type of co-authorship
+
+<!-- Same comment as before: it is more relevant to study the categorical variables by counting their occcurences, than by counting the mean value of the share of male and female in each category. I propose an alternative table and figure below. -->
+
+```{r, echo=FALSE, include=FALSE}
 # Calculer les moyennes annuelles des proportions de genres par catégorie de genre
 # Calculer les moyennes annuelles des proportions de genres par catégorie de genre
 annual_stats_by_category <- Corpus.CleanedNames.2 %>%
@@ -628,7 +740,7 @@ annual_stats_by_category <- Corpus.CleanedNames.2 %>%
 annual_stats_by_category
 ```
 
-```{r, echo=FALSE, include=TRUE}
+```{r, echo=FALSE, include=FALSE}
 # Restructurer les données pour ggplot2
 annual_stats_by_category_long <- annual_stats_by_category %>%
   pivot_longer(
@@ -658,48 +770,58 @@ From the 2000s onwards, the proportion of women authors continued to rise, altho
 
 The data thus show a gradual integration of women into mixed collaborations, indicating steady progress towards gender parity in academic research, despite the persistence of a slight male majority.
 
-### Temporal evolution according to categorical variables, by number of articles
-
 ```{r, echo=FALSE, include=TRUE}
-annual_stats_by_category_nbarticles <- Corpus.CleanedNames.2 %>%
+annual_stats_by_category <- Corpus.CleanedNames.2 %>%
+  filter(!is.na(category_gender)) %>% 
+  ungroup() %>% 
+  group_by(PY) %>% 
+  mutate(n_articles_by_year = length(TI)) %>% 
+  ungroup() %>% 
   group_by(PY, category_gender) %>%
   summarize(
-    nb_articles=n()
-    )
+    count_year_gendercat = length(TI), 
+    perc = length(TI) / n_articles_by_year * 100
+  ) %>% 
+  group_by(PY, category_gender) %>% 
+  slice(1)
 
-annual_stats_by_category_nbarticles
-```
-
-```{r, echo=FALSE, include=TRUE}
-ggplot(annual_stats_by_category_nbarticles, aes(x = PY, y = nb_articles, color = category_gender, group = category_gender)) +
-  geom_line(size = 1) +
-  geom_point(size = 2) +
-  labs(title = "Number of Articles by Year and Gender Category",
+# Créer le graphique
+ggplot(annual_stats_by_category, aes(x = PY, y = perc, color = category_gender)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Evolution of the gender type of co-authorship",
        x = "Publication Year",
-       y = "Number of Articles",
-       color = "Gender Category") +
-  theme_minimal() +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.05)))
+       y = "Share of articles",
+       color = "Gender") +
+  theme_minimal()
 ```
+Changes a bit the interpretations: important rise of mixed-gender coauthorship, important decrease in the share of articles written by single male authors, stable share of female-only articles.
 
-Analysis of data on the number of articles by gender category from 1950 to 2021 reveals some interesting, albeit nuanced, trends.
-In 1950, the "M" category (exclusively male) dominated, with 491 articles.
-The "F" (all-female) and "MF" (mixed) categories accounted for 27 and 12 items respectively.
+<!-- -> you actually did this just below. I thus adjust. I think you can refresh your interpretations, especially to the idea that we kow look at the share of articles in each category by year (and not anymore the total count of articles) -->
 
-In subsequent years, trends changed significantly.
-For example, in 1960, although the "M" category remained dominant with 381 items, the "F" and "MM" categories showed an increase compared to 1950.
-However, missing data also began to appear more pronounced.
+Analysis of data on the number of articles by gender category from 1950 to 2021
+reveals some interesting, albeit nuanced, trends. In 1950, the "M" category
+(exclusively male) dominated, with 491 articles. The "F" (all-female) and "MF"
+(mixed) categories accounted for 27 and 12 items respectively.
+In subsequent years, trends changed significantly. For example, in 1960,
+although the "M" category remained dominant with 381 items, the "F" and "MM"
+categories showed an increase compared to 1950. However, missing data also began
+to appear more pronounced.
+The 1970s mark a notable change, with a significant increase in the number of
+articles in all categories, including a notable rise in missing data. The "F"
+category began to show gradual growth, reaching 130 articles in 1970.
+From the 2000s onwards, all categories see a marked increase in the number of
+articles, reflecting a global expansion of academic research. The "MF" (mixed
+collaboration) category grows particularly rapidly, peaking in 2021 with 16,267
+articles, but missing data also increases drastically.
+In conclusion, these data illustrate not only the quantitative expansion of
+scientific research over the decades, but also changes in the gendered
+composition of research teams, with a significant increase in mixed
+collaboration. However, it is crucial to take into account the impact of missing
+data, which can influence the interpretation of these upward trends.
 
-The 1970s mark a notable change, with a significant increase in the number of articles in all categories, including a notable rise in missing data.
-The "F" category began to show gradual growth, reaching 130 articles in 1970.
-
-From the 2000s onwards, all categories see a marked increase in the number of articles, reflecting a global expansion of academic research.
-The "MF" (mixed collaboration) category grows particularly rapidly, peaking in 2021 with 16,267 articles, but missing data also increases drastically.
-
-In conclusion, these data illustrate not only the quantitative expansion of scientific research over the decades, but also changes in the gendered composition of research teams, with a significant increase in mixed collaboration.
-However, it is crucial to take into account the impact of missing data, which can influence the interpretation of these upward trends.
-
-### Analysis of articles on climate change at an aggregate level
+### Investigating a differentiated place of female authors in the climate economics literature
+#### Analysis of articles on climate change at an aggregate level
 
 ```{r, echo=FALSE, include=TRUE}
 # Calculer les statistiques descriptives pour chaque catégorie de la variable binaire "CC"
@@ -712,10 +834,7 @@ stats_by_CC <- Corpus.CleanedNames.2 %>%
     Median_Proportion_Male_Id = median(proportion_gender_male_id, na.rm = TRUE)
   )
 
-stats_by_CC
-```
 
-```{r, echo=FALSE, include=TRUE}
 # Conversion en format long
 stats_long <- stats_by_CC %>%
   pivot_longer(cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id),
@@ -724,8 +843,8 @@ stats_long <- stats_by_CC %>%
 
 ggplot(stats_long, aes(x = factor(CC), y = Proportion, fill = Gender)) +
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Proportion of Female and Male Authors by CC Category",
-       x = "CC Category",
+  labs(title = "Proportion of Female and Male Authors by for climate-related articles and all other articles in economics",
+       x = "Climate change related articles vs the rest",
        y = "Mean Proportion",
        fill = "Gender") +
   scale_y_continuous(limits = c(0, 1)) +
@@ -740,17 +859,15 @@ On the other hand, the "CC = 0" category shows a greater predominance of male au
 
 These results highlight a distinct gendered distribution in climate change-related publications, with a predominance of male authors in both categories but more female authors in articles that focus on climate change, thus indicating varied dynamics in gender participation depending on the specific research theme.
 
-### Climate change, category gender and number of articles
+#### Climate change, category gender and number of articles
 
 ```{r, echo=FALSE, include=TRUE}
 stats_by_CC_category_gender <- Corpus.CleanedNames.2 %>%
   group_by(CC, category_gender) %>%
   summarize(nb_articles = n(), .groups = 'drop')
 
-stats_by_CC_category_gender
-```
+# stats_by_CC_category_gender
 
-```{r, echo=FALSE, include=TRUE}
 # Calculer la proportion des articles pour chaque combinaison de CC et category_gender
 stats_by_CC_category_gender <- stats_by_CC_category_gender %>%
   group_by(CC) %>%
@@ -775,6 +892,8 @@ For the "CC = 0" category, which does not deal specifically with climate change,
 In contrast, the "CC = 1" category shows lower overall articles numbers, with a similar trend of male predominance, but with a slightly higher proportion of items attributed to mixed gender combinations (8,310 articles for MF, 7,149 articles for MM).
 Analysis of the number of articles by genre category therefore reveals that, despite the lower overall quantity of articles in the "CC = 1" category, mixed-genre combinations account for a significant share compared with the other categories, underlining an increased diversity in scientific collaborations focused on climate change.
 
+<!-- Most of these differences are explained by the fact that the climate economics literature is rather recent (explosion starting in 2005). The difference in the representaion of categories between CC articles and the rest of economics, is thus clearly due to this characteristic. One way to limit this would be to compare these figures for a subsample of articles in 2005-2020. I think that your graph below is interesting: it shows no difference in the share of female authors between the two literatures -->
+
 ### Temporal evolution of the proportion of female authors by CC
 
 ```{r, echo=FALSE, include=TRUE}
@@ -783,12 +902,9 @@ annual_stats_by_CC <- Corpus.CleanedNames.2 %>%
   summarize(
     Mean_Proportion_Female_Id = mean(proportion_gender_female_id, na.rm = TRUE),
     .groups = 'drop'
-  )
+  )  #%>% 
+  # complete(PY, Mean_Proportion_Female_Id, fill = list(n = 0))
 
-annual_stats_by_CC
-```
-
-```{r, echo=FALSE, include=TRUE}
 ggplot(annual_stats_by_CC, aes(x = PY, y = Mean_Proportion_Female_Id, color = factor(CC))) +
   geom_line(size = 1) +
   labs(title = "Evolution of Mean Proportion of Female Authors Over Time",
