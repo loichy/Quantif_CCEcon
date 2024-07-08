@@ -851,13 +851,17 @@ ggplot(stats_long, aes(x = factor(CC), y = Proportion, fill = Gender)) +
   theme_minimal()
 ```
 
-Analysis of the data on articles relating to climate change, grouped according to the binary variable "CC" (climate change), reveals notable differences in the gendered composition of authors.
+Analysis of the data on articles relating to climate change, grouped according to the binary variable "CC" (climate change), reveals notable differences in the gendered composition of authors. 
+<!-- I'd say that there is not much differences "in average": the graph suggests no meanigful differences in the bar heights -->
 
 Looking at the descriptive statistics, we see that in the category where the theme of climate change is central ("CC = 1"), the average proportion of female authors is slightly higher than in the "CC = 0" category.
 In detail, the average proportion of female authors is 28.29% in the "CC = 1" category, compared with 25.53% in the "CC = 0" category.
 On the other hand, the "CC = 0" category shows a greater predominance of male authors, with an average of 74.47%, compared to the "CC = 1" category where the average is 71.71%.
 
+
 These results highlight a distinct gendered distribution in climate change-related publications, with a predominance of male authors in both categories but more female authors in articles that focus on climate change, thus indicating varied dynamics in gender participation depending on the specific research theme.
+
+<!-- We need to bring nuance: When interpreting this: important to remind that articles focusing on climate change intiated in early 2000, at a time where inclusion of female authors was increasing. So, when comparing with the rest of economics, there is an important quantity of "old" articles, with very few female authors. Thus: we can't say whether the relatively higher share of female authors on climate-related article is linked to the topic -->
 
 #### Climate change, category gender and number of articles
 
@@ -921,9 +925,11 @@ For example, in 1983, the proportion of women authors was 13.5%, whereas it was 
 For articles on climate change, the proportion was 0.4% in 1989, compared with 23% in 2023.
 The increase in the proportion of women is therefore more marked in climate economics research than in other types of economic research.
 
+<!-- This figure exactly suggests that climate-related articles are recent, and thus have in average a composition of gendered-authorship which looks like to the recent composition in the rest of economics, and is different from the old type of authors (before 2000). -->
+
 ###.Focus on Top5 and Top30 journals and on climte change
 
-```{r, echo=FALSE, include=TRUE}
+```{r, echo=FALSE, include=FALSE}
 # Calculer les statistiques descriptives pour chaque combinaison de catégorie de journaux et de la variable binaire "CC"
 stats_by_top5journal_CC <- Corpus.CleanedNames.2 %>%
   group_by(TopFive, CC) %>%
@@ -933,10 +939,9 @@ stats_by_top5journal_CC <- Corpus.CleanedNames.2 %>%
     Median_Proportion_Male_Id = median(proportion_gender_male_id, na.rm = TRUE),
     Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
   )
-stats_by_top5journal_CC
 ```
 
-```{r, echo=FALSE, include=TRUE}
+```{r, echo=FALSE, include=FALSE}
 # Calculer les statistiques descriptives pour chaque combinaison de catégorie de journaux et de la variable binaire "CC"
 stats_by_top30journal_CC <- Corpus.CleanedNames.2 %>%
   group_by(Top30, CC) %>%
@@ -946,7 +951,6 @@ stats_by_top30journal_CC <- Corpus.CleanedNames.2 %>%
     Median_Proportion_Male_Id = median(proportion_gender_male_id, na.rm = TRUE),
     Mean_Proportion_Male_Id = mean(proportion_gender_male_id, na.rm = TRUE),
   )
-stats_by_top30journal_CC
 ```
 
 This section provides descriptive statistics on the proportion of women and men by journal type and research theme.
@@ -970,6 +974,27 @@ ggplot(Corpus.CleanedNames.2, aes(x = factor(Top30), y =proportion_gender_male_i
        y = "Mean Proportion of Female Authors") +
   facet_wrap(~ CC, scales = "free")
 ```
+
+Alternartive representation: I think that I would also represent the average share of female authors using bars, rather than the boxplot. Like this:
+
+```{r}
+
+# Conversion en format long
+stats_bytop30_long <- stats_by_top30journal_CC %>%
+  pivot_longer(cols = c(Mean_Proportion_Female_Id, Mean_Proportion_Male_Id),
+               names_to = "Gender",
+               values_to = "Proportion")
+
+ggplot(stats_bytop30_long, aes(x = factor(Top30), y = Proportion, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion of Female and Male Authors by for climate-related articles between top-30 journals and other journals",
+       # x = "Climate change related articles vs the rest",
+       y = "Mean Proportion",
+       fill = "Gender") +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_minimal()
+```
+
 
 # Modèle économétrique de citations
 
