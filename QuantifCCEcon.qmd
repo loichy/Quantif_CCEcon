@@ -985,12 +985,15 @@ stats_bytop30_long <- stats_by_top30journal_CC %>%
                names_to = "Gender",
                values_to = "Proportion")
 
+
+
 ggplot(stats_bytop30_long, aes(x = factor(Top30), y = Proportion, fill = Gender)) +
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Proportion of Female and Male Authors by for climate-related articles between top-30 journals and other journals",
-       # x = "Climate change related articles vs the rest",
+  labs(title = "Proportion of the share of Female and Male Authors for climate-related articles and between top-30 journals and other journals",
+       x = "Top-30 journals (=1) and other journals (=0)",
        y = "Mean Proportion",
        fill = "Gender") +
+  facet_grid(~ CC, labeller = labeller(CC = c("1" = "Climate-related articles", "0" = "All articles in economics (except climate-related)")))
   scale_y_continuous(limits = c(0, 1)) +
   theme_minimal()
 ```
@@ -1003,7 +1006,9 @@ Il est également possible de saisir le rôle du changement climatique (est-ce q
 
 (i) explorer les données de citations: plusieurs variables existent (regarder le dictionnaire de variables, je crois qu'il y en a au moins 3). Regarder le degré de corrélation entre toutes ces mesures de citation, regarder également les valeurs manquantes afin de choisir laquelle des variables de citation choisir.
 
--   CR (Cited References) et NR (Cited References Count): ne son plus dans la base de données, pourtant il s'agit je pense de variables importantes
+-   CR (Cited References) et NR (Cited References Count): ne sont plus dans la base de données, pourtant il s'agit je pense de variables importantes
+
+<!-- En effet, mais elles ne nous seront pas utile dans l'immédiat (elles renseignent la bilbiographie de chaque article, et le nombre de références bibliographiques). Ici: nous étudions les déterminants des ciations reçues par un article: et on questionne le rôle du genre de l'auteur/des auteurs. -->
 
 -   TC : Web of Sciences Core Collection Times Cited Count.
 
@@ -1025,6 +1030,8 @@ print(na_Z9)
 
 -   U1 et U2 peuvent être des variables intéressantes mais je ne comprends pas vraiment à quoi elles font référence.U2 citations entre 2013 et 2023
 
+<!-- U2: nombres de citations reçues par l'article sur les 10 dernières années. U1: Nombre de citations sur les 6 derniers mois (mesuré en mars 2023) -->
+
 ```{r}
 na_U1 <- sum(is.na(Corpus.CleanedNames.2$U1))
 print(na_U1)
@@ -1041,6 +1048,8 @@ print(na_U2)
 
 Mêmes chiffres pour U1,U2 et Z9 donc il s'agit peut-être des mêmes articles à chaque fois dont les valeurs sont manquantes pour ces 3 variables.
 TC semble être la meilleure variable à utiliser étant donné son faible nombre de donnnées manquantes.
+
+<!-- Les valeurs manquantes de z9, u1 et u2 viennent du fait que seuls les articles de web of science disposent de ces variablees. Les articles de Scopus ne disposent que de TC. On va donc utiliser TC comme variable dépendante. -->
 
 (ii) Lire les deux articles déposés sur la dropbox ([cliquer ici pour le lien](https://www.dropbox.com/scl/fo/jxx20i4cdgd4xnfhfm0na/ADxj_2rn9GVec03RiifhawA?rlkey=p8ps1t61v9jo9kan339uyv94c&dl=0)). L'article de Nature est très descriptif et possiblement en décalage (la question des premiers auteurs ne se posent pas en économie, car l'ordre des auteurs est quasi systématiquement l'ordre alphabétique). L'article dans la revue de sciences sociale est vraiment pas mal pour situer la question, et voir une approche (l'article fait aussi une bonne revue de litté qui peut être utile si tu cherches d'autres méthodes/références pour t'inspirer).
 
@@ -1059,9 +1068,10 @@ TC semble être la meilleure variable à utiliser étant donné son faible nombr
 
 -   Analysis of **scientific impact** of articles published between 2008 and 2012 indexed in Web of Science databases (**proxy = citations**).
 
--   Observations: 5,483,841 research papers and review articles with 27,329,915 authorships.
+-   Observations: 5,483,841 research papers and review articles with 27,329,915 authorships.
 
--   Gender assignment: using data from the US Social Security database
+-   Gender assignment: using data from the US Social Security database
+<!-- I guess that this is, in some parts, a similar gender identification protocole as ours? The gender package uses US social security data on firstname and the  gender of each US citizen.  -->
 
 -   Proportion of each gender's output by comparing the proportion of identified authorships for each gender on any given paper.These gendered fractions were then aggregated at the levels of countries and disciplines.
 
