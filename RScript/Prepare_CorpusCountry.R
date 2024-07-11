@@ -155,29 +155,29 @@ Country_PY_df <- Corpus_Country_long %>%
   filter(PY < 2023) %>% 
   group_by(country, PY) %>% 
   summarize(
-    N_econ = n(),
-    N_CC = length(TI[CC==1]),
-    N_TopFive = length(TI[TopFive == 1]),
-    N_TopTen = length(TI[Top10 == 1]),
-    N_Top30 = length(TI[Top30 == 1]),
-    N_TrunkJournals = length(TI[TrunkJournals == 1]),
-    N_Top30_CC = length(TI[Top30 == 1 & CC == 1]),
-    N_TrunkJournals_CC = length(TI[TrunkJournals == 1 & CC == 1]),
-    mean_TC = mean(as.numeric(TC), na.rm = T),
-    mean_nb_authors = mean(nb_authors, na.rm = T),
-    mean_nb_authors_gendered = mean(nb_authors_gendered, na.rm = T),
-    mean_share_male_authors = mean(proportion_gender_male_id, na.rm = T),
-    mean_share_female_authors = mean(proportion_gender_female_id, na.rm = T),
-    N_F = length(TI[category_gender == "F"]),
-    N_M = length(TI[category_gender == "M"]),
-    N_FF = length(TI[category_gender == "FF"]),
-    N_MM = length(TI[category_gender == "MM"]),
-    N_FM = length(TI[category_gender == "MF"])
+    N_econ = n(), # Nb d'articles d'économie publiés dans l'année dont un (au moins) des auteurs sont affiliés dans le pays
+    N_CC = length(TI[CC==1]), # Nb d'articles d'économie sur le CC publiés dans l'année dont un (au moins) auteurs sont affiliés dans le pays
+    N_TopFive = length(TI[TopFive == 1]), # Nb d'articles publiés dans des journaux du top 5 dont un (au moins) des auteurs est affilié dans le pays
+    N_TopTen = length(TI[Top10 == 1]), # même chose avec journaux du top ten"
+    N_Top30 = length(TI[Top30 == 1]), # Idem, top 30
+    N_TrunkJournals = length(TI[TrunkJournals == 1]), # Idem, Trunk journals
+    N_Top30_CC = length(TI[Top30 == 1 & CC == 1]), # Idem, pour les articles dans un journal du top 30 sur le CC
+    N_TrunkJournals_CC = length(TI[TrunkJournals == 1 & CC == 1]), # Idem pour les articles dans un trunk journals
+    mean_TC = mean(as.numeric(TC), na.rm = T), # Moyenne des citations reçus sur les articles avec au moins auteur affilié dans le pays publié cette année
+    mean_nb_authors = mean(nb_authors, na.rm = T), # Moyenne du nb d'auteurs sur ces articles
+    mean_nb_authors_gendered = mean(nb_authors_gendered, na.rm = T), # Moyenne du nb d'auteurs dont le genre est assigné
+    mean_share_male_authors = mean(proportion_gender_male_id, na.rm = T), # Moyenne de la part des auteurs qui sont des hommes pour tous les articles d'économie publiés cette année avec au moins un auteur affilié dans le pays
+    mean_share_female_authors = mean(proportion_gender_female_id, na.rm = T), # Moyenne de la part des auteurs qui sont des femmes pour tous les articles d'économie publiés cette année avec au moins un auteur affilié dans le pays
+    N_F = length(TI[category_gender == "F"]), # Nombre d'article avec une auteure (femme seule)
+    N_M = length(TI[category_gender == "M"]), # Nombre d'article avec un auteur (homme seul)
+    N_FF = length(TI[category_gender == "FF"]), # Nombre d'articles écrits par plusieurs femmes
+    N_MM = length(TI[category_gender == "MM"]), # Nombre d'articles écrits pas plusieurs hommes
+    N_FM = length(TI[category_gender == "MF"]) # Nombre d'articles écrits pas une équipe mixte
   ) %>% 
   bind_rows(World_df) %>% 
   group_by(PY) %>% 
-  mutate(
-    Share_econ = N_econ / N_econ[country == "World"] * 100,
+  mutate(# Mêmes variables mais en pourcentage dans le total mondial de cette année
+    Share_econ = N_econ / N_econ[country == "World"] * 100, 
     Share_CC = ifelse(test= N_CC[country == "World"] == 0, 
                       yes = NA, 
                       no = N_CC / N_CC[country == "World"] * 100),
@@ -195,4 +195,6 @@ Country_PY_df <- Corpus_Country_long %>%
   ungroup() %>% 
   arrange(PY, country)
 
+##### Save data
+save(Country_PY_df, file = here(dir$prep.data, "Corpus_Country_PY.Rdata"))
 
