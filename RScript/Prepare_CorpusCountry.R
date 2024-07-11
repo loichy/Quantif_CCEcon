@@ -58,6 +58,7 @@ concatenate_non_blank <- function(row) {# Function to concatenate all orthograph
   paste(non_blank_values, collapse = "|")
 } 
 concatenated_values <- apply(temp[,name_columns], 1, concatenate_non_blank) # Apply the function to each row of the UN countries
+concatenated_values <- str_to_title(concatenated_values)
 country_named_vector <- setNames(concatenated_values, temp$Name0) # Get a named vector, where each element is a country with all its orthographs separated by "|".
 country_named_vector["United Kingdom"] <- paste(country_named_vector["United Kingdom"], "England|Scotland|Wales|Northern Ireland", sep = "|")
 
@@ -74,7 +75,7 @@ str_extract(string = sample_corpus$C1, pattern = country_named_vector[c("United 
 
 # Apply str_detect to the subsample of C1, and to all country names
 tic()
-Country_df <- as.list(str_to_title(country_named_vector)) %>% # Take the vector of country names/spellings
+Country_df <- as.list(country_named_vector) %>% # Take the vector of country names/spellings
   map_dfc(\(x) str_detect(string = str_to_title(sample_corpus$C1), pattern = x)) %>% # Apply the function str_detect to C1 on each element of the country named vector, and put the output in a dataframe with variable name being the name of the vector
   mutate(C1 = sample_corpus$C1) %>%  # Add to the data frame the affiliation to check
   select(C1, names(country_named_vector))
@@ -94,10 +95,20 @@ Country_df2 <- as.list(country_named_vector) %>% # Take the vector of country na
   map_dfc(\(x) str_detect(string = str_to_title(Corpus.Countries$C1), pattern = x)) # Apply the function str_detect to C1 on each element of the country named vector, and put the output in a dataframe with variable name being the name of the vector
 toc()
 
+# Add all other variables to data and only retain articles with at least one country of affiliation
+Corpus_Country_wide <- Corpus.Countries %>% 
+  bind_cols(Country_df2) %>% 
+  filter(rowSums(across(all_of(names(country_named_vector)))) > 0)
+# Note that we're losing 35 000 articles, where we cannot identify country (this is mostly because they do not contain any  country names, but only city, or US region/state)
 
+# Cehck outcome of the function:
+check <- Corpus_Country_wide %>% 
+  slice_sample(n = 100) %>% 
+  select(C1, names(country_named_vector))
 
 ##### Build panel df of article by countries and year
-World_df <- Corpus.Countries %>% 
+# First: construct stat at the world level for each year
+World_df <- Corpus_Country_wide %>% 
   filter(!is.na(PY), PY > 1969) %>% 
   group_by(PY) %>% 
   summarize(country = "World",
@@ -107,6 +118,8 @@ World_df <- Corpus.Countries %>%
             N_TopTen = length(TI[Top10 == 1]),
             N_Top30 = length(TI[Top30 == 1]),
             N_TrunkJournals = length(TI[TrunkJournals == 1]),
+            N_Top30_CC = length(TI[Top30 == 1 & CC == 1]),
+            N_TrunkJournals_CC = length(TI[TrunkJournals == 1 & CC == 1]),
             mean_TC = mean(as.numeric(TC), na.rm = T),
             mean_nb_authors = mean(nb_authors, na.rm = T),
             mean_nb_authors_gendered = mean(nb_authors_gendered, na.rm = T),
@@ -119,40 +132,67 @@ World_df <- Corpus.Countries %>%
             N_FM = length(TI[category_gender == "MF"])
             )
 
-Corpus_Country_long <- Corpus.Countries %>% 
-  bind_cols(Country_df2) %>% 
-  
-check <- Corpus_Country_long %>% 
-  slice_sample(n = 100) %>% 
-  select(C1, names(country_named_vector))
+# Create a vector of real contries names
+real_country_names <- countries::country_reference_list %>%
+  filter(WTO_en != "") %>% 
+  select(Name0) %>% 
+  pull()
 
-Corpus_Country_long <- Corpus_Country_long
+# Second, pivot data: have a country variable that states from which country comes the authors  
+Corpus_Country_long <- Corpus_Country_wide %>% 
+  filter(!is.na(PY), PY > 1969) %>% 
   pivot_longer(cols = names(country_named_vector),
                names_to = "country",
                values_to = "is_affiliated_in_country") %>% 
   filter(is_affiliated_in_country == TRUE)
 
+# Third, only retain real country names
+Corpus_Country_long2 <- Corpus_Country_long %>% 
+  filter(country %in% real_country_names)
+
 # Compute descriptive statistics by country and by year
 Country_PY_df <- Corpus_Country_long %>% 
+  filter(PY < 2023) %>% 
   group_by(country, PY) %>% 
-  summarize(country = "World",
-            N_econ = n(),
-            N_CC = length(TI[CC==1]),
-            N_TopFive = length(TI[TopFive == 1]),
-            N_TopTen = length(TI[Top10 == 1]),
-            N_Top30 = length(TI[Top30 == 1]),
-            N_TrunkJournals = length(TI[TrunkJournals == 1]),
-            mean_TC = mean(TC, na.rm = T),
-            mean_nb_authors = mean(nb_authors, na.rm = T),
-            mean_nb_authors_gendered = mean(nb_authors_gendered, na.rm = T),
-            mean_share_male_authors = mean(proportion_gender_male_id, na.rm = T),
-            mean_share_female_authors = mean(proportion_gender_female_id, na.rm = T),
-            N_F = length(TI[category_gender == "F"]),
-            N_M = length(TI[category_gender == "M"]),
-            N_FF = length(TI[category_gender == "FF"]),
-            N_MM = length(TI[category_gender == "MM"]),
-            N_FM = length(TI[category_gender == "MF"])
+  summarize(
+    N_econ = n(),
+    N_CC = length(TI[CC==1]),
+    N_TopFive = length(TI[TopFive == 1]),
+    N_TopTen = length(TI[Top10 == 1]),
+    N_Top30 = length(TI[Top30 == 1]),
+    N_TrunkJournals = length(TI[TrunkJournals == 1]),
+    N_Top30_CC = length(TI[Top30 == 1 & CC == 1]),
+    N_TrunkJournals_CC = length(TI[TrunkJournals == 1 & CC == 1]),
+    mean_TC = mean(as.numeric(TC), na.rm = T),
+    mean_nb_authors = mean(nb_authors, na.rm = T),
+    mean_nb_authors_gendered = mean(nb_authors_gendered, na.rm = T),
+    mean_share_male_authors = mean(proportion_gender_male_id, na.rm = T),
+    mean_share_female_authors = mean(proportion_gender_female_id, na.rm = T),
+    N_F = length(TI[category_gender == "F"]),
+    N_M = length(TI[category_gender == "M"]),
+    N_FF = length(TI[category_gender == "FF"]),
+    N_MM = length(TI[category_gender == "MM"]),
+    N_FM = length(TI[category_gender == "MF"])
   ) %>% 
-  bind_rows()
+  bind_rows(World_df) %>% 
+  group_by(PY) %>% 
+  mutate(
+    Share_econ = N_econ / N_econ[country == "World"] * 100,
+    Share_CC = ifelse(test= N_CC[country == "World"] == 0, 
+                      yes = NA, 
+                      no = N_CC / N_CC[country == "World"] * 100),
+    Share_TopFive = N_TopFive / N_TopFive[country == "World"] * 100,
+    Share_TopTen = N_TopTen / N_TopTen[country == "World"] * 100, 
+    Share_Top30 = N_Top30 / N_Top30[country == "World"] * 100,
+    Share_TrunkJournals = N_TrunkJournals / N_TrunkJournals[country == "World"] * 100,
+    Share_Top30_CC = ifelse(test= N_Top30_CC[country == "World"] == 0, 
+                            yes = NA, 
+                            no = N_Top30_CC / N_Top30_CC[country == "World"] * 100),
+    Share_TrunkJournals_CC = ifelse(test= N_TrunkJournals_CC[country == "World"] == 0, 
+                                    yes = NA, 
+                                    no = N_TrunkJournals_CC / N_TrunkJournals_CC[country == "World"] * 100)
+    ) %>% 
+  ungroup() %>% 
+  arrange(PY, country)
 
 
