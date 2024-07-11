@@ -24,7 +24,8 @@ gc()
 # Load package
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, data.table, here, lubridate, ggmap, geosphere, stringr, 
-               gender, genderdata, stringi, dplyr, tidyr, genderizeR, kableExtra, ggplot2)
+               gender, genderdata, stringi, dplyr, tidyr, genderizeR, kableExtra, ggplot2,
+               plm, fixest, stargazer, lmtest, modelsummary, tictoc, countries)
 
 # List directories 
 dir <- list()
@@ -993,7 +994,7 @@ ggplot(stats_bytop30_long, aes(x = factor(Top30), y = Proportion, fill = Gender)
        x = "Top-30 journals (=1) and other journals (=0)",
        y = "Mean Proportion",
        fill = "Gender") +
-  facet_grid(~ CC, labeller = labeller(CC = c("1" = "Climate-related articles", "0" = "All articles in economics (except climate-related)")))
+  facet_grid(~ CC, labeller = labeller(CC = c("1" = "Climate-related articles", "0" = "All articles in economics (except climate-related)")))+
   scale_y_continuous(limits = c(0, 1)) +
   theme_minimal()
 ```
@@ -1197,79 +1198,77 @@ Ici nous c'est l'analyse du genre dans les journaux d'économie et par année.
 Je pense qu'il faut voir le journal/la revue comme l'équivalent du comté, et ensuite chaque article est comme un crime (avec dans notre cas des caractéristiques dont on cherche à évaluer le rôle: dont notamment le genre des auteurs.) Les modèles que l'on cherche à faire sont ceux de la "dummy variable regression" ou aussi de la "within transformation" (sur le site web).
 Qui sont deux approches parfaitement équivalentes (eles donnent les mêmes coefficient pour le $\beta$ associé à la variable F).
 
-```{r}
-library(dplyr)
-library(lmtest)
-```
 
-```{r}
-# Prendre les 6000 premières lignes des données
-sample_data <- Corpus.CleanedNames.2 %>% 
-  slice_sample(n = 6000) %>% 
-  filter(!is.na(PY))
-```
 
-Effet fixe en facteurs
+```{r,include=FALSE}
 
-```{r}
-sample_data <- sample_data %>%
-  mutate(PY = as.factor(PY),    # Effet fixe année
-         SO = as.factor(SO))  # Effet fixe journal
-```
+# A pdata frame, to use plm commands
+Corpus_pdata <- Corpus.CleanedNames.2 %>% 
+  filter(!is.na(PY)) %>% 
+  pdata.frame(index = c("SO","PY")) %>% 
+  mutate(TC = as.numeric(TC),
+         PG = as.numeric(PG))
 
-```{r}
-Corpus.CleanedNames.2 <- Corpus.CleanedNames.2 %>%
+# A standard dataframe, with fixed effect in factor, to use lm commands, just to check and compare with plm commands (should lead to the same results)
+Corpus_data <- Corpus.CleanedNames.2 %>% 
+  filter(!is.na(PY)) %>% 
   mutate(PY = as.factor(PY),    # Effet fixe année=PY
-         SO = as.factor(SO))  # Effet fixe journal=SO
+         SO = as.factor(SO), # Effet fixe journal
+         TC = as.numeric(TC),
+         PG = as.numeric(PG)
+  )
+
+# Only keep articles published in journals with at least 100 publications
+Corpus_pdata <- Corpus_pdata %>% 
+  group_by(SO) %>% 
+  mutate(N_SO = n()) %>% 
+  arrange(SO) %>% 
+  filter(N_SO > 200) %>% 
+  ungroup() %>% 
+  select(TC, PY, SO, proportion_gender_female_id, PG, nb_authors, Top30, TopFive, Top25, CC, category_gender, AtLeastOneMale, AtLeastOneFemale)
+Corpus_data <- Corpus_data %>% 
+  group_by(SO) %>% 
+  mutate(N_SO = n()) %>% 
+  arrange(SO) %>% 
+  filter(N_SO > 200) %>% 
+  ungroup()%>% 
+  select(TC, PY, SO, proportion_gender_female_id, PG, nb_authors, Top30, TopFive, Top25, CC, category_gender, AtLeastOneMale, AtLeastOneFemale)
+# Remove about 200 000 articles that are published in not recuring journals  
 ```
 
-```{r}
-levels_count1 <- sample_data %>%
-  summarise(PY_levels = n_distinct(TI),
+
+We are going to estimate a fixed effect panel model: a journal-fixed effect, and a year fixed efffect, and our variable measuring the share of female authors at the article level. We will thus compare the share of citation received by an article published in a given year in a given journal, with an article in the same journal-year, and the only difference will be the share of female-authors.
+
+```{r, include=FALSE}
+levels_count1 <- Corpus_data %>%
+  summarise(PY_levels = n_distinct(PY),
             SO_levels = n_distinct(SO))
 
 print(levels_count1)
 ```
 
-```{r}
-levels_count <- Corpus.CleanedNames.2 %>%
-  summarise(PY_levels = n_distinct(PY),
-            SO_levels = n_distinct(SO))
+74 années différentes et 10 125 journaux différents.
+<!-- Removing articles publlished in journals with less than 100 articles, we then have 1394 different journals -->
 
-print(levels_count)
-```
-
-75 années différentes et 10 127 journaux différents.
 
 Citations et nombre de pages en numérique
-
-```{r}
-sample_data$PG <- as.numeric(sample_data$PG)
-sample_data$TC <- as.numeric(sample_data$TC)
-```
-
-```{r}
-Corpus.CleanedNames.2$PG <- as.numeric(Corpus.CleanedNames.2$PG)
-Corpus.CleanedNames.2$TC <- as.numeric(Corpus.CleanedNames.2$TC)
-```
 
 Régression des citations sur l'effet fixe année, l'effet fixe journal, la proportion d'auteurs identifiées comme femme, avec comme variables de contrôle le nombre d'auteurs et de page par article
 
 ```{r}
-model_1 <- lm(TC ~ SO + PY + proportion_gender_female_id + PG + nb_authors, data = sample_data)
-names(model_1$coefficients)
+library(fixest)
+model_pooled <- feols(fml = TC ~ proportion_gender_female_id + PG + nb_authors, data = Corpus_data) # No fixed effects
+model_jfe <- feols(fml = TC ~ proportion_gender_female_id + PG + nb_authors | SO, data = Corpus_data) # Journal fixed effects
+model_yfe <- feols(fml = TC ~ proportion_gender_female_id + PG + nb_authors | PY, data = Corpus_data) # Year fixed effects
+model_twfe <- feols(fml = TC ~ proportion_gender_female_id + PG + nb_authors | SO + PY, data = Corpus_data) # Year and journal fixed effects
+model_twfe2 <- feols(fml = TC ~ proportion_gender_female_id + PG + nb_authors | PY^SO, data = Corpus_data) # Year and journal fixed effects
 
-model_1$coefficients[names(model_1$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
+df_models <- etable(list(model_pooled, model_jfe, model_yfe, model_twfe, model_twfe2), tex=FALSE)
+kableExtra::kbl(x = df_models, format = "html")
 ```
 
-```{r}
-#model1 <- lm(TC ~ SO + PY + proportion_gender_female_id + PG + nb_authors, data = Corpus.CleanedNames.2)
-#Erreur : vecteurs de mémoire épuisés (limite atteinte ?)
-```
-
-```{r}
-summary(model_1)
-```
+<!-- Il faudrait réviser les interprétations:
+- En particulier: évolution du coef lié à la part des femmes: prendre en compte le journal (à travers un effet fixe) réduit l'effet des variables nb d'auteurs et part de femmes auteurs. Prendre en compte le journal et l'année de publication réduit encore plus l'effet de la variable mesurant la part des femmes auteurs, au point qu'elle n'est plus statistiquement significative. Cas d'un effet fixe journal-année (effet journal et année spécifique: on compare les citations relativement aux articles publiés dans le même journal et la même année): effet négatif et significatif. -->
 
 Interprétation coefficients:
 - Proportion de Femmes parmi les Auteurs (Estimate = 3.09736, SE = 0.77091)
@@ -1282,21 +1281,16 @@ Le nombre d'auteurs a un effet positif et significatif sur le nombre de citation
 ### Dummy Variable Regression
 
 ```{r}
-model = list()
-model$dummy <- lm(TC ~ proportion_gender_female_id + PG + nb_authors + factor(SO)+ factor(PY), data = sample_data)
-model$dummy$coefficients[names(model$dummy$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
+# Plus utile (il s'agit d'un modèle de panel, avec effet fixe année et effet fixe journal (équivalent à model_twfe), pas utile de le réestimer, surtout que cela prend beaucoup de temps)
+# model = list()
+# model$dummy <- lm(TC ~ proportion_gender_female_id + PG + nb_authors + factor(SO)+ factor(PY), data = sample_data)
+# model$dummy$coefficients[names(model$dummy$coefficients) %in% c("proportion_gender_female_id", "PG", "nb_authors")]
 
-  
-library(stargazer)
-help(stargazer)
-```
-
-```{r}
-summary(model$dummy)
-stargazer(model$dummy, 
-          type = "text",
-          keep = c(1,2,3)
-          )
+# summary(model$dummy)
+# stargazer(model$dummy, 
+#           type = "text",
+#           keep = c(1,2,3)
+#           )
 ```
 
 Interprétation coefficients = très similaire à la régression précédente:
@@ -1310,46 +1304,42 @@ Très significatif (p < 0.001). Cela suggère qu'un nombre plus élevé d'auteur
 ### The Within Transformation
 
 ```{r}
-sample_data2 <- sample_data %>%
-  group_by(SO) %>%
-  mutate(mean_TC = mean(TC, na.rm=T),
-         mean_prop = mean(proportion_gender_female_id, na.rm=T),
-         mean_PG = mean(PG, na.rm=T),
-         mean_nb_authors = mean(nb_authors, na.rm=T)) %>%
-  ungroup() %>%
-  group_by(PY) %>% 
-    mutate(mean_PY_TC = mean(TC, na.rm=T),
-         mean_PY_prop = mean(proportion_gender_female_id, na.rm=T),
-         mean_PY_PG = mean(PG, na.rm=T),
-         mean_PY_nb_authors = mean(nb_authors, na.rm=T)) %>%
-  ungroup() %>% 
-  mutate(demeaned_TC = TC - mean_TC - mean_PY_TC + mean(TC, na.rm=T),
-         demeaned_prop = proportion_gender_female_id - mean_prop - mean_PY_prop + mean(proportion_gender_female_id, na.rm = T),
-         demeaned_PG = PG - mean_PG - mean_PY_PG + mean(PG, na.rm=T),
-         demeaned_nb_authors = nb_authors - mean_nb_authors - mean_PY_nb_authors + mean(nb_authors, na.rm=T)
-         )
-```
-
-```{r}
-model$xsect <- lm(TC ~ proportion_gender_female_id + PG + nb_authors, data = sample_data2)
-model$demeaned <- lm(demeaned_TC ~ demeaned_prop + demeaned_PG + demeaned_nb_authors, data = sample_data2)
-```
-
-```{r}
-stargazer(model$xsect, 
-          type = "text",
-          keep = c(1,2,3)
-          )
-stargazer(model$demeaned, 
-          type = "text",
-          keep = c(1,2,3)
-          )
-stargazer(model$dummy, 
-          type = "text",
-          keep = c(1,2,3)
-          )
-
-summary(model$demeaned)
+# Pas utile de le réestimer: c'estun modèle à effets fixes identiques à ceux estimer plus haut, seulement on change la méthode d'estimation. Au lieu d'inclure les variables binaires propres à chaque effets fixes dans la régression, on régresse les variables centrées sur la moyenne de l'année et du journal
+# sample_data2 <- sample_data %>%
+#   group_by(SO) %>%
+#   mutate(mean_TC = mean(TC, na.rm=T),
+#          mean_prop = mean(proportion_gender_female_id, na.rm=T),
+#          mean_PG = mean(PG, na.rm=T),
+#          mean_nb_authors = mean(nb_authors, na.rm=T)) %>%
+#   ungroup() %>%
+#   group_by(PY) %>% 
+#     mutate(mean_PY_TC = mean(TC, na.rm=T),
+#          mean_PY_prop = mean(proportion_gender_female_id, na.rm=T),
+#          mean_PY_PG = mean(PG, na.rm=T),
+#          mean_PY_nb_authors = mean(nb_authors, na.rm=T)) %>%
+#   ungroup() %>% 
+#   mutate(demeaned_TC = TC - mean_TC - mean_PY_TC + mean(TC, na.rm=T),
+#          demeaned_prop = proportion_gender_female_id - mean_prop - mean_PY_prop + mean(proportion_gender_female_id, na.rm = T),
+#          demeaned_PG = PG - mean_PG - mean_PY_PG + mean(PG, na.rm=T),
+#          demeaned_nb_authors = nb_authors - mean_nb_authors - mean_PY_nb_authors + mean(nb_authors, na.rm=T)
+#          )
+# model$xsect <- lm(TC ~ proportion_gender_female_id + PG + nb_authors, data = sample_data2)
+# model$demeaned <- lm(demeaned_TC ~ demeaned_prop + demeaned_PG + demeaned_nb_authors, data = sample_data2)
+# 
+# stargazer(model$xsect, 
+#           type = "text",
+#           keep = c(1,2,3)
+#           )
+# stargazer(model$demeaned, 
+#           type = "text",
+#           keep = c(1,2,3)
+#           )
+# stargazer(model$dummy, 
+#           type = "text",
+#           keep = c(1,2,3)
+#           )
+# 
+# summary(model$demeaned)
 ```
 
 proportion_gender_female_id : Le coefficient estimé est positif mais non significatif = 0.23555 avec un écart type de 0.84075 donc la proportion d'auteurs identifiés comme femmes a un effet significatif sur le nombre de citations.
@@ -1359,52 +1349,44 @@ PG (nombre de pages) : Le coefficient est de 0.03115 avec un écart type de 0.01
 nb_authors (nombre d'auteurs) : Le coefficient est de -0.59259 avec un écart type de 0.24722. Ce coefficient est significatif au niveau de 5% (p = 0.0166) donc une augmentation du nombre d'auteurs est associée à une légère diminution du nombre de citations.
 
 ```{r}
-summary(model$demeaned)
+# summary(model$demeaned)
 ```
 
 Aucun résultat significatif
 
 ### Nouvelle méthode: plm
+<!-- J'ai abandonné la méthode plm car méthode de calcul trop longue. Je pense que choisir la méthode du package fixest est très bien -->
 
-```{r}
-library(plm)
-```
-
-
-```{r}
+```{r, include=FALSE}
 # incomplete_rows <- is.na(sample_data$PY)
-sample_data_clean <- sample_data
+# sample_data_clean <- sample_data
 #[!incomplete_rows, ]
-```
 
-Transformer sample_data en un objet `panel data frame`
-
-```{r}
 # Transformons data 1 en un objet `panel data frame`
-sample_data_panel <- pdata.frame(sample_data_clean, index = c("SO", "PY"))# index spécifie la structure de panel de nos données: elles sont indicées par journaux avec la variable SO, et par le temps avec la variable PY
+# sample_data_panel <- pdata.frame(sample_data_clean, index = c("SO", "PY"))# index spécifie la structure de panel de nos données: elles sont indicées par journaux avec la variable SO, et par le temps avec la variable PY
 
 # Jetons un oeil à l'objet:
-pdim(sample_data_panel)
-head(index(sample_data_panel))
+# pdim(sample_data_panel)
+# head(index(sample_data_panel))
 ```
 
 Effectuons la régression à l'aide de la commande plm, sans effet fixe
 
-```{r}
-model_plm = plm(formula = TC ~ proportion_gender_female_id + PG + nb_authors, # Formule du modèle estimé 
-                       data = sample_data_panel, 
-                       model = "within")
-stargazer(model_plm, type = "text")
-stargazer(model$dummy, type = "text", keep = c(1,2,3))
-stargazer(model$demeaned, type = "text", keep = c(1,2,3))
-coef(model_plm) # résumé des beta_chapeau,
-head(fixef(model_plm))
+```{r, include=FALSE}
+# model_plm = plm(formula = TC ~ proportion_gender_female_id + PG + nb_authors, # Formule du modèle estimé 
+#                        data = sample_data_panel, 
+#                        model = "within")
+# stargazer(model_plm, type = "text")
+# stargazer(model$dummy, type = "text", keep = c(1,2,3))
+# stargazer(model$demeaned, type = "text", keep = c(1,2,3))
+# coef(model_plm) # résumé des beta_chapeau,
+# head(fixef(model_plm))
 ```
 
-```{r}
-model_lsdv = lm(formula = TC ~ proportion_gender_female_id + PG + nb_authors + factor(PY) + factor(SO),
-                    data = sample_data) # commande lm: on précise le modèle que l'on estime. En incorporant factor(fips) on force lm à comprendre les modalités de la variables fips comme étant chacune une variable binaire dans le modèle (moyen rapide d'incorporer des variables binaires). 
-head(coef(model_lsdv)) # Pour seulement obtenir les coefficients estimés par les MCO
+```{r, include=FALSE}
+# model_lsdv = lm(formula = TC ~ proportion_gender_female_id + PG + nb_authors + factor(PY) + factor(SO),
+                    # data = sample_data) # commande lm: on précise le modèle que l'on estime. En incorporant factor(fips) on force lm à comprendre les modalités de la variables fips comme étant chacune une variable binaire dans le modèle (moyen rapide d'incorporer des variables binaires). 
+# head(coef(model_lsdv)) # Pour seulement obtenir les coefficients estimés par les MCO
 
 # summary(est_model_lsdv) # Pour avoir le résumé entier de la régression (mais très long)
 ```
@@ -1418,127 +1400,111 @@ Visualisation/représentation (Loic)
 Sous-échantillon des journaux
 TC/Age sans effet fixe
 
+- A priori, les différences de régression venaient de la difficulté à estimer en intégrant des effets fixes doubles "manuellement" (surtout dans le cas de la méthode within: risque d'erreur de calculs lorsque l'on retire la moyenne), et estimation rendu délicate par le grand nombre d'observations (quasi 1 millions, en fait 610 000 lorsque l'on ne prend que les observations sans valeur manquantes pour la variable gender) et le grand nombre d'effets fixes (quasi plus de 1000).
+
+- Représentation dans un tableau de régression des résultats de régression du package `fixest` avec la commande kbl du package `kableextra` semble idéale.
+
+- En utilisant la méthode d'estimation de modèles à effets fixes du package `fixest`, il reste alors à étudier deux modèles:  
+* Celui où l'on estime des modèles séparés sur le sous-échantillon des journaux du TOP30 (`Corpus_data` des articles publiés dans les journaux du TOP30), et le sous échantillon des autres journaux (`Corpus_data` en retirant les articles publiés dans des journaux du top 30), 
+* Un second modèle où l'on étudie la caractère différencié des articles sur le changement climatique en terme de citation (intégré la variable CC, posible de la faire interagir avec le genre également).
+
 ## Analyse par pays
 
-To do:
-Gérer la sortie de l'algorithme pour faciliter l'aggrégation
-Envisager les multiples orthographes des noms de pays
-Pouvoir regrouper par région du monde
+<!-- To do: -->
+<!-- Gérer la sortie de l'algorithme pour faciliter l'aggrégation -->
+<!-- Envisager les multiples orthographes des noms de pays -->
+<!-- Pouvoir regrouper par région du monde -->
 
-Nous avons la colonne des affiliations d'auteur C1.
-Cette colonne a différents formats possibles, elle dit pour chaque auteur son (ses) affiliations (un auteur peut avoir plusieurs affiliations, et deux auteurs peuvent avoir la même affiliation).
-L'objectif est donc de créer des variables qui retournent tous les pays cités dans cette colonne C1 et qui viendrait alors caractériser l'origine géographique de l'article.
-Par étapes: 1.
-Avoir un vecteur qui contient tous les noms de pays du monde.
-2.
-Construire une commande qui regarde dans chaque élément de C1 quels pays apparaissent et retourne chacun de ces pays.
-3.
-Puis faire des variables pour tous les pays cités par article (comme le nombre d'auteurs, on peut s'arréter à max 10 pays).
+<!-- Nous avons la colonne des affiliations d'auteur C1. -->
+<!-- Cette colonne a différents formats possibles, elle dit pour chaque auteur son (ses) affiliations (un auteur peut avoir plusieurs affiliations, et deux auteurs peuvent avoir la même affiliation). -->
+<!-- L'objectif est donc de créer des variables qui retournent tous les pays cités dans cette colonne C1 et qui viendrait alors caractériser l'origine géographique de l'article. -->
+<!-- Par étapes: 1. -->
+<!-- Avoir un vecteur qui contient tous les noms de pays du monde. -->
+<!-- 2. -->
+<!-- Construire une commande qui regarde dans chaque élément de C1 quels pays apparaissent et retourne chacun de ces pays. -->
+<!-- 3. -->
+<!-- Puis faire des variables pour tous les pays cités par article (comme le nombre d'auteurs, on peut s'arréter à max 10 pays). -->
 
-```{r}
-library(countries)
-temp <- countries::country_reference_list
-country_list <- as.vector(countries::country_reference_list$simple)
-country_list
-```
+First, we create a vector containing each countries and their alternative orthograph/spelling. 
 
-```{r}
-extract_countries <- function(data, country_list) #Fonction intitulée "extract_countries" qui prend comme argument la base de données et le vecteur qui contient la liste des pays du monde
-  
-  {
-  result_matrix <- matrix(nrow = nrow(data), ncol = 10, 
-                          dimnames = list(NULL, paste0("country_", 1:10)))
-  #création d'une matrice vide dont le nombre de lignes correspond au nombre de lignes de la dataframe et dont le nombre de colonnes correspond au 10 pays representés par les colonnes "country_1" à "country_10". La commande dimnames spécifie le nom des lignes (pas de noms spécifiques =NULL) et le nom des colonnes
-  
-  # Loop through each entry in C1 column
-  
-  for (i in seq_along(data$C1)) 
-    
-    {
-    
-    potential_countries <- regmatches(data$C1[i], gregexpr("(?<=, )\\w+(?=(, |;|$))", data$C1[i], perl=TRUE))[[1]]
-  
-    
-#regmatches() est utilisé pour extraire les parties de data$C1[i] qui correspondent à l'expression régulière spécifiée par gregexpr().
-#gregexpr() recherche une expression régulière dans une chaîne de caractères donnée et retourne les positions des correspondances trouvées.
-#"(?<=, )\\w+(?=(, |;|$)) = séquences de caractères alphanumériques qui suivent une virgule et un espace, mais qui précèdent soit une virgule suivie d'un espace, un point-virgule ou la fin de la chaîne
-    
-    # Initialize counter for extracted countries
-    country_counter <- 1
-    
-    # Loop through potential countries
-    for (country in potential_countries) {
-      # Check if the extracted country is in country_list
-      if (country %in% country_list) {
-        # Store the country in the result matrix
-        result_matrix[i, country_counter] <- country
-        country_counter <- country_counter + 1
-        # Break if we've found 10 countries for this entry
-        if (country_counter > 10) break
-      }
-    }
-  }
-  
-  # Convert result_matrix to data frame and bind to original data
-  result_df <- as.data.frame(result_matrix)
-  data <- cbind(data, result_df)
-  
-  return(data)
-}
-```
 
-```{r}
-sample_data_with_countries <- extract_countries(sample_data, country_list)
-```
+```{r, include=FALSE}
 
-```{r}
-library(tidyverse)
-```
-
-```{r}
-#sample_data_processed <- sample_data %>%
-  #separate_wider_delim(
-    #col = C1,
-    #into = paste0("country_", 1:10), 
-    #sep = "; ",
-    #extra = "merge",
-    #token = ", "
-  #)
-
+temp <- countries::country_reference_list %>% 
+  filter(UN_en!="") %>%  # Retain countries reckognized by the UN
+  as.data.frame() # Extract all country names 
+name_columns <- c(grep("^name", names(temp), value = TRUE), "Name0", "Name1", "Name2", "WTO_en", "simple") # Select all columns for the different names/spellings
+concatenate_non_blank <- function(row) {# Function to concatenate all orthographs in a single element, and discarding NA and blank space
+  # Filter out blank spaces
+  non_blank_values <- row[(row != "") & !is.na(row)]
+  # Concatenate the non-blank values with "|"
+  paste(non_blank_values, collapse = "|")
+} 
+concatenated_values <- apply(temp[,name_columns], 1, concatenate_non_blank) # Apply the function to each row of the UN countries
+country_named_vector <- setNames(concatenated_values, temp$Name0) # Get a named vector, where each element is a country with all its orthographs separated by "|".
+country_named_vector["United Kingdom"] <- paste(country_named_vector["United Kingdom"], "England|england|Scotland|scotland|Wales|wales|Northern Ireland", sep = "|")
 
 ```
+
+We get the following list of spelling, for instance, in the case of the United States of America:
+
+```{r}
+country_named_vector[c("United States of America")]
+```
+
+
+Then, create a function that can detect if a country name appears in the affiliation column `C1`. We get as an outcome:
+
+```{r, include=TRUE}
+
+# Create subsample to test the function
+sample_corpus <- Corpus.CleanedNames.2 %>% 
+  filter(!is.na(C1)) %>% 
+  slice_sample(n = 100)
+C1_sample <- sample_corpus$C1
+
+# Test function str_detect and str_extract
+str_detect(string = sample_corpus$C1, pattern = country_named_vector[c("United States of America")]) # Returns T/F if country name appears
+str_extract(string = sample_corpus$C1, pattern = country_named_vector[c("United States of America")]) # Return the exact string that match (the country name)
+
+# Apply str_detect to the subsample of C1, and to all country names
+tic()
+Country_df <- as.list(country_named_vector) %>% # Take the vector of country names/spellings
+  map_df(\(x) str_detect(string = str_to_title(sample_corpus$C1), pattern = x)) %>% # Apply the function str_detect to C1 on each element of the country named vector, and put the output in a dataframe with variable name being the name of the vector
+  mutate(C1 = sample_corpus$C1) %>%  # Add to the data frame the affiliation to check
+  select(C1, names(country_named_vector))
+toc()
+
+head(Country_df)
+
+```
+
+We can then add this to the `sample_corpus` data frame and have all the variables for all articles, and also their country of affiliation.
+
+```{r}
+sample_corpus_fin <- sample_corpus %>% 
+  bind_cols(dplyr::select(Country_df, -C1))
+head(sample_corpus_fin)
+```
+
+
+We can then summarize data by countries:
+
 
 
 Que faire en suite?
 1.
 Décrire les données: part des articles/auteurs provenant de chaque pays du monde
 ```{r}
-# Calculer la part des articles par pays
-country_counts <- table(stack(sample_data_with_countries[, grep("^country_", colnames(sample_data_with_countries))]))
 
-total_country_counts<-rowSums(country_counts)
-print(total_country_counts)
 ```
 
-Au total il y a 101 auteurs qui viennent d'Albanie
 
-```{r}
-all_authors_incorpus <- unlist(sample_data_with_countries[, grepl("^fullname_", colnames(sample_data_with_countries))]) %>% 
-  unique() # Vecteur qui contient tous les prénoms différents dans le corpus
-length(all_authors_incorpus)
-```
 
-Au total il y a 11 240 auteurs uniques
 
-```{r}
-# Diviser chaque valeur de total_country_counts par le nombre d'auteurs uniques
-normalized_country_counts <- total_country_counts / length(all_authors_incorpus)
 
-# Formater les résultats pour les rendre plus lisibles
-formatted_counts <- format(normalized_country_counts, digits = 3, scientific = FALSE)
 
-print(formatted_counts)
-```
+
 
 ```{r}
 df_country_counts <- data.frame(
@@ -1605,6 +1571,66 @@ Beaucoup de libertés ici dans la visualisation des données et l'interprétatio
 Possible de faire des cartes pour visualiser les résultats (intensité des couleurs reflète la part d'articles provenant d'un pays/région).
 3.
 Construire des donées de panel qui contiennent pour chaque pays-année: le nombre d'articles traitant du changement climatique, puis un ensemble de variables économiques (PIB, part de budget public dans la recherche), et de variables indiquant l'exposition/l'implication face au changement climatique (émissions annuelles de GES, la mise en oeuvre d epolitique de réduction d'émissions, les possibles dégats futurs du changement climatique)... L'idée serait ensuite d'explorer les corrélations entre l'effort de recherche au sujet du changement climatique et ces variables.
+
+```{r, include=FALSE}
+# I archive old code below:
+# extract_countries <- function(data, country_list){ #Fonction intitulée "extract_countries" qui prend comme argument la base de données et le vecteur qui contient la liste des pays du monde
+#   
+# 
+#   result_matrix <- matrix(nrow = nrow(data), ncol = 10, 
+#                           dimnames = list(NULL, paste0("country_", 1:10)))
+#   #création d'une matrice vide dont le nombre de lignes correspond au nombre de lignes de la dataframe et dont le nombre de colonnes correspond au 10 pays representés par les colonnes "country_1" à "country_10". La commande dimnames spécifie le nom des lignes (pas de noms spécifiques =NULL) et le nom des colonnes
+#   
+#   # Loop through each entry in C1 column
+#   
+#   for (i in seq_along(data$C1)) 
+#     
+#     {
+#     
+#     potential_countries <- regmatches(data$C1[i], gregexpr("(?<=, )\\w+(?=(, |;|$))", data$C1[i], perl=TRUE))[[1]]
+#   
+#     
+# #regmatches() est utilisé pour extraire les parties de data$C1[i] qui correspondent à l'expression régulière spécifiée par gregexpr().
+# #gregexpr() recherche une expression régulière dans une chaîne de caractères donnée et retourne les positions des correspondances trouvées.
+# #"(?<=, )\\w+(?=(, |;|$)) = séquences de caractères alphanumériques qui suivent une virgule et un espace, mais qui précèdent soit une virgule suivie d'un espace, un point-virgule ou la fin de la chaîne
+#     
+#     # Initialize counter for extracted countries
+#     country_counter <- 1
+#     
+#     # Loop through potential countries
+#     for (country in potential_countries) {
+#       # Check if the extracted country is in country_list
+#       if (country %in% country_list) {
+#         # Store the country in the result matrix
+#         result_matrix[i, country_counter] <- country
+#         country_counter <- country_counter + 1
+#         # Break if we've found 10 countries for this entry
+#         if (country_counter > 10) break
+#       }
+#     }
+#   }
+#   
+#   # Convert result_matrix to data frame and bind to original data
+#   result_df <- as.data.frame(result_matrix)
+#   data <- cbind(data, result_df)
+#   
+#   return(data)
+# }
+
+# sample_data_with_countries <- extract_countries(sample_data, country_list)
+
+#sample_data_processed <- sample_data %>%
+  #separate_wider_delim(
+    #col = C1,
+    #into = paste0("country_", 1:10), 
+    #sep = "; ",
+    #extra = "merge",
+    #token = ", "
+  #)
+
+
+```
+
 
 ### Conclusion
 
